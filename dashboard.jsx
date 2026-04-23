@@ -4,6 +4,9 @@
 function VariationA({ onReset }) {
   const [state, setState] = useKDState();
   const [openTask, setOpenTask] = React.useState(null);
+  const [openLineId, setOpenLineId] = React.useState(null);
+  const [showAddLine, setShowAddLine] = React.useState(false);
+  const [addTaskLane, setAddTaskLane] = React.useState(null);
   const [tab, setTab] = React.useState('all');
 
   const progress = KD.computeProgress(state);
@@ -16,15 +19,17 @@ function VariationA({ onReset }) {
     ...s, checked: { ...s.checked, [id]: !s.checked[id] }
   }));
 
-  const addTask = (lane) => {
-    const text = prompt('New task for ' + lane + ':');
-    if (!text) return;
-    const id = 'x' + Date.now();
-    setState(s => ({
-      ...s,
-      lanes: { ...s.lanes, [lane]: [...s.lanes[lane], { id, text, cat: 'Documents', due: 'Soon', urgency: 'soon' }]}
-    }));
+  const addTask = (lane) => setAddTaskLane(lane);
+
+  const openTaskById = (taskId, lane) => {
+    const t = state.lanes[lane]?.find(x => x.id === taskId);
+    if (t) { setOpenLineId(null); setOpenTask({ task: t, lane }); }
   };
+
+  const monthlyGap = Math.round(
+    ((state.money.monthlyReleaseEUR || 0) - (state.money.monthlyCostEUR || 0))
+    * (state.money.fxEurUsd || 1)
+  );
 
   const targetDate = new Date(state.meta.departure + 'T00:00:00')
     .toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
@@ -41,6 +46,7 @@ function VariationA({ onReset }) {
       <style>{`
         .va-sans { font-family: 'Inter', -apple-system, 'Segoe UI', sans-serif; }
         .va-mono { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+        .v1-hero-row > * { min-width: 0; }
       `}</style>
 
       {/* Masthead */}
@@ -53,18 +59,37 @@ function VariationA({ onReset }) {
           <div className="va-mono" style={{
             fontSize: 10, letterSpacing: 2, textTransform: 'uppercase',
             color: '#9b4722', marginBottom: 4,
-          }}>Family HQ · {new Date().toLocaleDateString('en-US', { weekday: 'long' })}</div>
+          }}>Study abroad · {new Date().toLocaleDateString('en-US', { weekday: 'long' })}</div>
           <h1 style={{
             fontSize: 56, fontWeight: 400, lineHeight: 1,
             margin: 0, letterSpacing: -1,
           }}>
-            VJ is moving to <em style={{ color: '#9b4722', fontStyle: 'italic' }}>Köln</em>
+            Study abroad in <em style={{ color: '#9b4722', fontStyle: 'italic' }}>Köln</em>
           </h1>
           <div className="va-sans" style={{
             fontSize: 13, color: '#57514a', marginTop: 8,
           }}>
-            Shared dashboard for Vernon (CBS '26–'27) · updated {new Date().toLocaleDateString('en-US', { month:'short', day:'numeric' })}
+            Vernon · {state.meta.program} · '26–'27 · updated {new Date().toLocaleDateString('en-US', { month:'short', day:'numeric' })}
           </div>
+          {(state.meta.degrees || []).length > 0 && (
+            <div className="va-sans" style={{
+              marginTop: 10, display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center',
+            }}>
+              <span style={{
+                fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.8,
+                color: '#7a7266', fontWeight: 600,
+              }}>Degree ·</span>
+              {state.meta.degrees.map((d, i) => (
+                <React.Fragment key={i}>
+                  {i > 0 && <span style={{ fontSize: 11, color: '#a8a095', fontStyle: 'italic' }}>or</span>}
+                  <span style={{
+                    fontSize: 11, color: '#8a5a2b', background: '#f4ead9',
+                    padding: '3px 9px', borderRadius: 4, fontWeight: 600,
+                  }}>{d}</span>
+                </React.Fragment>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="va-sans" style={{
@@ -77,8 +102,8 @@ function VariationA({ onReset }) {
       </header>
 
       {/* Hero row */}
-      <section style={{
-        display: 'grid', gridTemplateColumns: '1.1fr 1fr 1fr',
+      <section className="v1-hero-row" style={{
+        display: 'grid', gridTemplateColumns: '1.1fr 1fr 1.2fr',
         gap: 18, marginBottom: 28,
       }}>
         <div style={{
@@ -124,21 +149,7 @@ function VariationA({ onReset }) {
           </div>
         </div>
 
-        <div style={{
-          background: '#f4ead9', borderRadius: 18, padding: '22px 24px',
-        }}>
-          <div className="va-mono" style={{
-            fontSize: 10, letterSpacing: 2, textTransform: 'uppercase', color: '#8a5a2b',
-          }}>Monthly gap · allowance vs costs</div>
-          <div style={{ fontSize: 44, fontWeight: 400, letterSpacing: -1, marginTop: 6, color: '#9a2f3f' }}>
-            −$86
-          </div>
-          <div className="va-sans" style={{ fontSize: 12, color: '#57514a', lineHeight: 1.5 }}>
-            Fintiba releases <strong>€992/mo</strong>.<br/>
-            Est. <strong>€600 living + phone + transit</strong> covered.<br/>
-            Discretionary: <strong>~€180</strong>.
-          </div>
-        </div>
+        <FxCalculator state={state} setState={setState}/>
       </section>
 
       {/* Money */}
@@ -161,26 +172,16 @@ function VariationA({ onReset }) {
           }}>
             <MoneyStat label="Total budget" value={
               <><span className="va-sans" style={{ fontSize: 13 }}>€</span>
-                <EditableNumber
-                  value={totals.totalEUR}
-                  onChange={() => {}}
-                  style={{ pointerEvents: 'none' }}
-                /></>
+                {totals.totalEUR.toLocaleString('de-DE')}</>
             } sub={`≈ $${Math.round(totals.totalEUR * totals.eurToUsd).toLocaleString()} USD`}/>
             <MoneyStat label="Sent so far" value={
               <><span className="va-sans" style={{ fontSize: 13 }}>€</span>
-                <EditableNumber
-                  value={Math.round(state.money.sentUSD / totals.eurToUsd)}
-                  onChange={(n) => setState(s => ({ ...s, money: { ...s.money, sentUSD: Math.round(n * s.money.fxEurUsd) }}))}
-                /></>
-            } sub={`${Math.round((state.money.sentUSD/totals.eurToUsd)/totals.totalEUR * 100)}% of total`}/>
-            <MoneyStat label="USD wired" value={
-              <><span className="va-sans" style={{ fontSize: 13 }}>$</span>
-                <EditableNumber
-                  value={state.money.sentUSD}
-                  onChange={(n) => setState(s => ({ ...s, money: { ...s.money, sentUSD: n }}))}
-                /></>
-            } sub="Merrill → CBS · Wire 1"/>
+                {totals.sentEUR.toLocaleString('de-DE')}</>
+            } sub={`${totals.totalEUR ? Math.round(totals.sentEUR/totals.totalEUR * 100) : 0}% of total · derived from line statuses`}/>
+            <MoneyStat label="Remaining" value={
+              <><span className="va-sans" style={{ fontSize: 13 }}>€</span>
+                {totals.remainingEUR.toLocaleString('de-DE')}</>
+            } sub={`≈ $${Math.round(totals.remainingEUR * totals.eurToUsd).toLocaleString()} USD still to move`}/>
           </div>
 
           <div style={{ paddingTop: 18 }}>
@@ -189,30 +190,46 @@ function VariationA({ onReset }) {
 
           <div style={{ marginTop: 20, display: 'flex', flexDirection: 'column', gap: 2 }}>
             {state.money.lines.map((line, i) => (
-              <div key={line.id} className="va-sans" style={{
-                display: 'grid', gridTemplateColumns: '1fr auto auto',
-                gap: 16, alignItems: 'center',
-                padding: '10px 0',
-                borderTop: i === 0 ? 'none' : '1px solid rgba(24,20,15,0.06)',
-                fontSize: 13,
-              }}>
+              <div key={line.id} className="va-sans"
+                onClick={() => setOpenLineId(line.id)}
+                onMouseEnter={e => e.currentTarget.style.background = '#faf6ef'}
+                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                style={{
+                  display: 'grid', gridTemplateColumns: '1fr auto auto',
+                  gap: 16, alignItems: 'center',
+                  padding: '10px 8px', marginLeft: -8, marginRight: -8,
+                  borderRadius: 8, cursor: 'pointer',
+                  borderTop: i === 0 ? 'none' : '1px solid rgba(24,20,15,0.06)',
+                  fontSize: 13,
+                  transition: 'background .12s',
+                }}
+              >
                 <div>
-                  <div style={{ color: '#1d1a15', fontWeight: 500 }}>{line.label}</div>
+                  <div style={{ color: '#1d1a15', fontWeight: 500, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    {line.label}
+                    {(line.taskIds || []).length > 0 && (
+                      <span title={(line.taskIds || []).length + ' linked task(s)'} style={{
+                        fontSize: 10, color: '#9b4722', background: '#f4ead9',
+                        padding: '1px 6px', borderRadius: 4, fontWeight: 600,
+                      }}>↳ {(line.taskIds || []).length}</span>
+                    )}
+                  </div>
                   <div style={{ color: '#7a7266', fontSize: 11, marginTop: 1 }}>{line.note}</div>
                 </div>
                 <StatusDot status={line.status}/>
                 <div style={{ fontFamily: 'inherit', fontWeight: 500, minWidth: 90, textAlign: 'right' }}>
-                  <EditableNumber
-                    prefix="€"
-                    value={line.amountEUR}
-                    onChange={(n) => setState(s => ({
-                      ...s, money: { ...s.money, lines: s.money.lines.map(l => l.id === line.id ? { ...l, amountEUR: n } : l) }
-                    }))}
-                  />
+                  €{(line.amountEUR || 0).toLocaleString('de-DE')}
                 </div>
               </div>
             ))}
           </div>
+
+          <button onClick={() => setShowAddLine(true)} className="va-sans" style={{
+            marginTop: 14, border: '1px dashed rgba(24,20,15,0.18)',
+            background: 'transparent', color: '#7a7266',
+            padding: '10px 12px', borderRadius: 10, cursor: 'pointer',
+            fontSize: 13, width: '100%', fontFamily: 'inherit', fontWeight: 500,
+          }}>+ Add line item</button>
         </div>
       </section>
 
@@ -363,6 +380,33 @@ function VariationA({ onReset }) {
           task={openTask.task} lane={openTask.lane}
           state={state} setState={setState}
           onClose={() => setOpenTask(null)}
+          onOpenLine={(lineId) => { setOpenTask(null); setOpenLineId(lineId); }}
+        />
+      )}
+
+      {openLineId && (
+        <LineDetailDrawer
+          lineId={openLineId}
+          state={state} setState={setState}
+          onClose={() => setOpenLineId(null)}
+          onOpenTask={(taskId, lane) => { setOpenLineId(null); openTaskById(taskId, lane); }}
+        />
+      )}
+
+      {showAddLine && (
+        <AddLineDialog
+          state={state} setState={setState}
+          onClose={() => setShowAddLine(false)}
+          categories={cats}
+        />
+      )}
+
+      {addTaskLane && (
+        <AddTaskDialog
+          lane={addTaskLane}
+          state={state} setState={setState}
+          onClose={() => setAddTaskLane(null)}
+          categories={cats}
         />
       )}
     </div>
@@ -430,6 +474,7 @@ function Lane({ title, lane, visible, filterASAP, state, onOpen, onAdd, onToggle
             checked={!!state.checked[t.id]}
             hasNotes={!!(state.notes[t.id] && (state.notes[t.id].text || (state.notes[t.id].comments||[]).length))}
             commentCount={(state.notes[t.id]?.comments||[]).length}
+            linkedLineCount={state.money.lines.filter(l => (l.taskIds||[]).includes(t.id)).length}
             onOpen={onOpen} onToggle={onToggle} categories={categories}
           />
         ))}
@@ -445,7 +490,7 @@ function Lane({ title, lane, visible, filterASAP, state, onOpen, onAdd, onToggle
   );
 }
 
-function TaskRow({ t, checked, hasNotes, commentCount, onOpen, onToggle, categories }) {
+function TaskRow({ t, checked, hasNotes, commentCount, linkedLineCount = 0, onOpen, onToggle, categories }) {
   return (
     <div
       className="va-sans"
@@ -478,6 +523,12 @@ function TaskRow({ t, checked, hasNotes, commentCount, onOpen, onToggle, categor
         <div style={{ marginTop: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
           <CategoryChip cat={t.cat} categories={categories}/>
           <UrgencyPill urgency={t.urgency} due={t.due}/>
+          {linkedLineCount > 0 && (
+            <span title={linkedLineCount + ' linked budget line(s)'} style={{
+              fontSize: 10, color: '#8a5a2b', background: '#f4ead9',
+              padding: '1px 6px', borderRadius: 4, fontWeight: 600, marginLeft: 4,
+            }}>€ {linkedLineCount}</span>
+          )}
         </div>
       </div>
       <div style={{
@@ -496,6 +547,607 @@ function TaskRow({ t, checked, hasNotes, commentCount, onOpen, onToggle, categor
       </div>
     </div>
   );
+}
+
+function AddLineDialog({ state, setState, onClose, categories }) {
+  const [label, setLabel] = React.useState('');
+  const [amount, setAmount] = React.useState(0);
+  const [status, setStatus] = React.useState('pending');
+  const [note, setNote]   = React.useState('');
+  const [alsoTask, setAlsoTask] = React.useState(true);
+  const [taskLane, setTaskLane] = React.useState('VJ');
+  const [taskCat, setTaskCat] = React.useState('Financial');
+  const [taskDue, setTaskDue] = React.useState('Soon');
+  const [taskUrgency, setTaskUrgency] = React.useState('soon');
+
+  const catNames = Object.keys(categories);
+  const statusOptions = [
+    { key: 'sent',      label: 'Sent',      color: '#2f7d5b' },
+    { key: 'pending',   label: 'Pending',   color: '#d98a45' },
+    { key: 'recurring', label: 'Recurring', color: '#6b7b8c' },
+  ];
+  const urgencyOptions = [
+    { key: 'asap',  label: 'ASAP',  color: '#9a2f3f' },
+    { key: 'soon',  label: 'Soon',  color: '#b67417' },
+    { key: 'later', label: 'Later', color: '#7a7266' },
+  ];
+
+  const create = () => {
+    if (!label.trim()) return;
+    const lineId = 'm-' + Date.now();
+    let newTaskId = null;
+    setState(s => {
+      let next = { ...s };
+      if (alsoTask) {
+        newTaskId = 'x' + Date.now();
+        next = {
+          ...next,
+          lanes: {
+            ...next.lanes,
+            [taskLane]: [...next.lanes[taskLane], {
+              id: newTaskId, text: label.trim(),
+              cat: taskCat, due: taskDue.trim() || 'TBD', urgency: taskUrgency,
+            }],
+          },
+        };
+      }
+      const newLine = {
+        id: lineId, label: label.trim(), amountEUR: Number(amount) || 0,
+        status, note: note.trim(),
+        taskIds: newTaskId ? [newTaskId] : [],
+      };
+      next = { ...next, money: { ...next.money, lines: [...next.money.lines, newLine] } };
+      return next;
+    });
+    onClose();
+  };
+
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 60,
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      background: 'rgba(24,20,15,0.35)', backdropFilter: 'blur(3px)',
+    }} onClick={onClose}>
+      <div onClick={e => e.stopPropagation()} style={{
+        width: 480, maxWidth: '94%', background: '#fbf8f3',
+        borderRadius: 16, padding: '22px 24px',
+        display: 'flex', flexDirection: 'column', gap: 14,
+        boxShadow: '0 20px 60px rgba(0,0,0,0.25)',
+        fontFamily: 'Inter, sans-serif',
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <div>
+            <div style={{ fontSize: 10, letterSpacing: 0.8, color: '#7a7266', textTransform: 'uppercase' }}>
+              New budget entry
+            </div>
+            <div style={{
+              fontSize: 22, fontWeight: 500, marginTop: 2,
+              fontFamily: '"Instrument Serif", Georgia, serif',
+            }}>Add line item</div>
+          </div>
+          <button onClick={onClose} style={{
+            border: 'none', background: 'transparent', fontSize: 20,
+            cursor: 'pointer', color: '#7a7266', padding: 0, lineHeight: 1,
+          }}>×</button>
+        </div>
+
+        <div>
+          <FieldLabel>Label</FieldLabel>
+          <input autoFocus value={label} onChange={e => setLabel(e.target.value)}
+            placeholder="e.g. Flights · Jakarta → Köln"
+            style={fieldStyle()}/>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <div>
+            <FieldLabel>Amount (EUR)</FieldLabel>
+            <input type="number" value={amount}
+              onChange={e => setAmount(e.target.value)}
+              style={fieldStyle()}/>
+          </div>
+          <div>
+            <FieldLabel>Status</FieldLabel>
+            <div style={{ display: 'flex', gap: 5 }}>
+              {statusOptions.map(s => {
+                const active = status === s.key;
+                return (
+                  <button key={s.key} onClick={() => setStatus(s.key)} style={{
+                    border: '1px solid ' + (active ? s.color : 'rgba(24,20,15,0.15)'),
+                    background: active ? s.color : '#fff',
+                    color: active ? '#fff' : s.color,
+                    padding: '6px 10px', borderRadius: 999,
+                    fontSize: 11, fontWeight: 600, cursor: 'pointer',
+                    fontFamily: 'inherit', flex: 1,
+                  }}>{s.label}</button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <FieldLabel>Note (optional)</FieldLabel>
+          <input value={note} onChange={e => setNote(e.target.value)}
+            placeholder="e.g. Round-trip via SQ"
+            style={fieldStyle()}/>
+        </div>
+
+        <label style={{
+          display: 'flex', alignItems: 'center', gap: 10,
+          padding: '10px 12px', borderRadius: 10,
+          background: alsoTask ? '#f4ead9' : '#fff',
+          border: '1px solid ' + (alsoTask ? '#e0cfa8' : 'rgba(24,20,15,0.08)'),
+          cursor: 'pointer', fontSize: 13,
+        }}>
+          <input type="checkbox" checked={alsoTask}
+            onChange={e => setAlsoTask(e.target.checked)}
+            style={{ width: 16, height: 16, accentColor: '#9b4722' }}/>
+          <span style={{ color: '#1d1a15', fontWeight: 500 }}>
+            Also create a linked task
+          </span>
+        </label>
+
+        {alsoTask && (
+          <div style={{
+            padding: 12, background: '#fff', borderRadius: 10,
+            border: '1px solid rgba(24,20,15,0.08)',
+            display: 'flex', flexDirection: 'column', gap: 10,
+          }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              <div>
+                <FieldLabel>Lane</FieldLabel>
+                <div style={{ display: 'flex', gap: 5 }}>
+                  {['VJ','Jul'].map(l => (
+                    <button key={l} onClick={() => setTaskLane(l)} style={{
+                      border: '1px solid ' + (taskLane === l ? '#1d1a15' : 'rgba(24,20,15,0.15)'),
+                      background: taskLane === l ? '#1d1a15' : '#fff',
+                      color: taskLane === l ? '#fff' : '#1d1a15',
+                      padding: '6px 10px', borderRadius: 999,
+                      fontSize: 11, fontWeight: 600, cursor: 'pointer',
+                      fontFamily: 'inherit', flex: 1,
+                    }}>{l}</button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <FieldLabel>Due</FieldLabel>
+                <input value={taskDue} onChange={e => setTaskDue(e.target.value)}
+                  style={fieldStyle()}/>
+              </div>
+            </div>
+            <div>
+              <FieldLabel>Category</FieldLabel>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+                {catNames.map(c => {
+                  const col = categories[c]; const active = taskCat === c;
+                  return (
+                    <button key={c} onClick={() => setTaskCat(c)} style={{
+                      border: '1px solid ' + (active ? col.color : 'transparent'),
+                      background: active ? col.color : col.bg,
+                      color: active ? '#fff' : col.color,
+                      padding: '4px 11px', borderRadius: 4,
+                      fontSize: 11, fontWeight: 600, cursor: 'pointer',
+                      fontFamily: 'inherit',
+                    }}>{c}</button>
+                  );
+                })}
+              </div>
+            </div>
+            <div>
+              <FieldLabel>Urgency</FieldLabel>
+              <div style={{ display: 'flex', gap: 5 }}>
+                {urgencyOptions.map(u => {
+                  const active = taskUrgency === u.key;
+                  return (
+                    <button key={u.key} onClick={() => setTaskUrgency(u.key)} style={{
+                      border: '1px solid ' + (active ? u.color : 'rgba(24,20,15,0.15)'),
+                      background: active ? u.color : '#fff',
+                      color: active ? '#fff' : u.color,
+                      padding: '6px 10px', borderRadius: 999,
+                      fontSize: 11, fontWeight: 600, cursor: 'pointer',
+                      fontFamily: 'inherit',
+                    }}>{u.label}</button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 4 }}>
+          <button onClick={onClose} style={{
+            border: 'none', background: 'transparent', color: '#7a7266',
+            padding: '8px 14px', borderRadius: 8, fontSize: 12,
+            cursor: 'pointer', fontFamily: 'inherit', fontWeight: 500,
+          }}>Cancel</button>
+          <button onClick={create} disabled={!label.trim()} style={{
+            background: label.trim() ? '#1d1a15' : 'rgba(24,20,15,0.3)',
+            color: '#fff', border: 'none',
+            padding: '8px 16px', borderRadius: 8, fontSize: 12,
+            fontWeight: 600, cursor: label.trim() ? 'pointer' : 'not-allowed',
+            fontFamily: 'inherit',
+          }}>Create</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function FxCalculator({ state, setState }) {
+  const fxEurUsd = state.money.fxEurUsd || 1.10;
+  const fxEurIdr = state.money.fxEurIdr || 18200;
+  const [base, setBase] = React.useState('EUR');
+  const [amount, setAmount] = React.useState(1000);
+  const [fetching, setFetching] = React.useState(false);
+  const [error, setError] = React.useState(null);
+
+  const toEur = (v, cur) =>
+    cur === 'EUR' ? v : cur === 'USD' ? v / fxEurUsd : v / fxEurIdr;
+  const fromEur = (eur, cur) =>
+    cur === 'EUR' ? eur : cur === 'USD' ? eur * fxEurUsd : eur * fxEurIdr;
+
+  const eurEquiv = toEur(amount, base);
+  const vals = {
+    EUR: fromEur(eurEquiv, 'EUR'),
+    USD: fromEur(eurEquiv, 'USD'),
+    IDR: fromEur(eurEquiv, 'IDR'),
+  };
+
+  const refresh = async () => {
+    setFetching(true); setError(null);
+    try {
+      const res = await fetch('https://open.er-api.com/v6/latest/EUR');
+      const data = await res.json();
+      if (data && data.result === 'success' && data.rates) {
+        setState(s => ({
+          ...s, money: {
+            ...s.money,
+            fxEurUsd: data.rates.USD || s.money.fxEurUsd,
+            fxEurIdr: data.rates.IDR || s.money.fxEurIdr,
+            fxUpdatedAt: new Date().toISOString(),
+          },
+        }));
+      } else {
+        setError('failed');
+      }
+    } catch (e) {
+      setError('offline');
+    }
+    setFetching(false);
+  };
+
+  React.useEffect(() => {
+    const last = state.money.fxUpdatedAt ? new Date(state.money.fxUpdatedAt).getTime() : 0;
+    if (Date.now() - last > 60 * 60 * 1000) refresh();
+  }, []);
+
+  const timeAgo = () => {
+    if (!state.money.fxUpdatedAt) return 'tap to update';
+    const diff = Date.now() - new Date(state.money.fxUpdatedAt).getTime();
+    const min = Math.floor(diff / 60000);
+    if (min < 1) return 'just now';
+    if (min < 60) return min + 'm ago';
+    const h = Math.floor(min / 60);
+    if (h < 24) return h + 'h ago';
+    return Math.floor(h / 24) + 'd ago';
+  };
+
+  const currencies = [
+    { key: 'EUR', label: 'EUR', symbol: '€' },
+    { key: 'USD', label: 'USD', symbol: '$' },
+    { key: 'IDR', label: 'IDR', symbol: 'Rp' },
+  ];
+
+  const localeFor = (cur) => cur === 'IDR' ? 'id-ID' : cur === 'EUR' ? 'de-DE' : 'en-US';
+  const fmt = (cur, v) => v.toLocaleString(localeFor(cur), { maximumFractionDigits: cur === 'IDR' ? 0 : 0 });
+
+  const baseSym = currencies.find(c => c.key === base).symbol;
+  const inputValue = vals[base].toLocaleString(localeFor(base), { maximumFractionDigits: 0 });
+  const other = currencies.filter(c => c.key !== base);
+
+  return (
+    <div style={{
+      background: '#f4ead9', borderRadius: 18, padding: '18px 22px',
+      display: 'flex', flexDirection: 'column', gap: 10, minHeight: 0,
+    }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div className="va-mono" style={{
+          fontSize: 10, letterSpacing: 2, textTransform: 'uppercase', color: '#8a5a2b',
+        }}>FX calculator</div>
+        <div className="va-sans" style={{
+          display: 'flex', gap: 2, background: 'rgba(138,90,43,0.12)',
+          borderRadius: 999, padding: 2,
+        }}>
+          {currencies.map(c => (
+            <button key={c.key} onClick={() => setBase(c.key)} style={{
+              border: 'none',
+              background: base === c.key ? '#1d1a15' : 'transparent',
+              color: base === c.key ? '#fff' : '#8a5a2b',
+              padding: '3px 10px', borderRadius: 999,
+              fontSize: 10, fontWeight: 600, cursor: 'pointer',
+              fontFamily: 'inherit', letterSpacing: 0.3,
+            }}>{c.label}</button>
+          ))}
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+        <span className="va-sans" style={{ fontSize: 16, color: '#8a5a2b', fontWeight: 500 }}>{baseSym}</span>
+        <input
+          type="text" size={1}
+          value={inputValue}
+          onChange={e => {
+            const raw = e.target.value.replace(/[^\d.-]/g, '');
+            setAmount(parseFloat(raw) || 0);
+          }}
+          onFocus={e => e.target.select()}
+          style={{
+            flex: 1, minWidth: 0, width: 0,
+            border: 'none', background: 'transparent', outline: 'none',
+            fontSize: 38, fontWeight: 400, letterSpacing: -1, color: '#1d1a15',
+            fontFamily: '"Instrument Serif", Georgia, serif', padding: 0,
+            lineHeight: 1.1,
+          }}
+        />
+      </div>
+
+      <div className="va-sans" style={{
+        display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6,
+        fontSize: 12, color: '#57514a',
+      }}>
+        {other.map(c => (
+          <div key={c.key} style={{
+            display: 'flex', alignItems: 'baseline', gap: 4, minWidth: 0,
+          }}>
+            <span style={{ color: '#8a5a2b', fontWeight: 700, fontSize: 10, letterSpacing: 1 }}>{c.label}</span>
+            <span style={{
+              fontSize: 13, color: '#1d1a15', fontWeight: 500,
+              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+            }}>{c.symbol} {fmt(c.key, vals[c.key])}</span>
+          </div>
+        ))}
+      </div>
+
+      <div className="va-sans" style={{
+        marginTop: 'auto', paddingTop: 8,
+        borderTop: '1px dashed rgba(138,90,43,0.3)',
+        fontSize: 10, color: '#8a5a2b',
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8,
+      }}>
+        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          €1 = ${fxEurUsd.toFixed(2)} · Rp {Math.round(fxEurIdr).toLocaleString('id-ID')}
+        </span>
+        <button onClick={refresh} disabled={fetching} style={{
+          border: 'none', background: 'transparent',
+          color: error ? '#9a2f3f' : '#8a5a2b',
+          cursor: fetching ? 'wait' : 'pointer',
+          fontSize: 10, fontWeight: 600, fontFamily: 'inherit',
+          padding: 0, textDecoration: 'underline', whiteSpace: 'nowrap',
+        }}>{fetching ? 'updating…' : error ? 'offline · retry' : timeAgo()}</button>
+      </div>
+    </div>
+  );
+}
+
+function AddTaskDialog({ lane, state, setState, onClose, categories }) {
+  const [text, setText] = React.useState('');
+  const [cat, setCat] = React.useState('Documents');
+  const [due, setDue] = React.useState('Soon');
+  const [urgency, setUrgency] = React.useState('soon');
+  const [alsoLine, setAlsoLine] = React.useState(false);
+  const [amount, setAmount] = React.useState(0);
+  const [lineStatus, setLineStatus] = React.useState('pending');
+
+  const catNames = Object.keys(categories);
+  const urgencyOptions = [
+    { key: 'asap',  label: 'ASAP',  color: '#9a2f3f' },
+    { key: 'soon',  label: 'Soon',  color: '#b67417' },
+    { key: 'later', label: 'Later', color: '#7a7266' },
+  ];
+  const statusOptions = [
+    { key: 'sent',      label: 'Sent',      color: '#2f7d5b' },
+    { key: 'pending',   label: 'Pending',   color: '#d98a45' },
+    { key: 'recurring', label: 'Recurring', color: '#6b7b8c' },
+  ];
+
+  const create = () => {
+    if (!text.trim()) return;
+    const taskId = 'x' + Date.now();
+    setState(s => {
+      let next = {
+        ...s,
+        lanes: {
+          ...s.lanes,
+          [lane]: [...s.lanes[lane], {
+            id: taskId, text: text.trim(),
+            cat, due: due.trim() || 'TBD', urgency,
+          }],
+        },
+      };
+      if (alsoLine) {
+        const lineId = 'm-' + Date.now();
+        next = {
+          ...next,
+          money: {
+            ...next.money,
+            lines: [...next.money.lines, {
+              id: lineId, label: text.trim(),
+              amountEUR: Number(amount) || 0,
+              status: lineStatus, note: '',
+              taskIds: [taskId],
+            }],
+          },
+        };
+      }
+      return next;
+    });
+    onClose();
+  };
+
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 60,
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      background: 'rgba(24,20,15,0.35)', backdropFilter: 'blur(3px)',
+    }} onClick={onClose}>
+      <div onClick={e => e.stopPropagation()} style={{
+        width: 480, maxWidth: '94%', background: '#fbf8f3',
+        borderRadius: 16, padding: '22px 24px',
+        display: 'flex', flexDirection: 'column', gap: 14,
+        boxShadow: '0 20px 60px rgba(0,0,0,0.25)',
+        fontFamily: 'Inter, sans-serif',
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <div>
+            <div style={{ fontSize: 10, letterSpacing: 0.8, color: '#7a7266', textTransform: 'uppercase' }}>
+              {lane}'s lane
+            </div>
+            <div style={{
+              fontSize: 22, fontWeight: 500, marginTop: 2,
+              fontFamily: '"Instrument Serif", Georgia, serif',
+            }}>Add task</div>
+          </div>
+          <button onClick={onClose} style={{
+            border: 'none', background: 'transparent', fontSize: 20,
+            cursor: 'pointer', color: '#7a7266', padding: 0, lineHeight: 1,
+          }}>×</button>
+        </div>
+
+        <div>
+          <FieldLabel>Task</FieldLabel>
+          <input autoFocus value={text} onChange={e => setText(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') create(); }}
+            placeholder="e.g. Book Germany trip with Hafiz"
+            style={fieldStyle()}/>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <div>
+            <FieldLabel>Due</FieldLabel>
+            <input value={due} onChange={e => setDue(e.target.value)}
+              style={fieldStyle()}/>
+          </div>
+          <div>
+            <FieldLabel>Urgency</FieldLabel>
+            <div style={{ display: 'flex', gap: 5 }}>
+              {urgencyOptions.map(u => {
+                const active = urgency === u.key;
+                return (
+                  <button key={u.key} onClick={() => setUrgency(u.key)} style={{
+                    border: '1px solid ' + (active ? u.color : 'rgba(24,20,15,0.15)'),
+                    background: active ? u.color : '#fff',
+                    color: active ? '#fff' : u.color,
+                    padding: '6px 10px', borderRadius: 999,
+                    fontSize: 11, fontWeight: 600, cursor: 'pointer',
+                    fontFamily: 'inherit', flex: 1,
+                  }}>{u.label}</button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <FieldLabel>Category</FieldLabel>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+            {catNames.map(c => {
+              const col = categories[c]; const active = cat === c;
+              return (
+                <button key={c} onClick={() => setCat(c)} style={{
+                  border: '1px solid ' + (active ? col.color : 'transparent'),
+                  background: active ? col.color : col.bg,
+                  color: active ? '#fff' : col.color,
+                  padding: '4px 11px', borderRadius: 4,
+                  fontSize: 11, fontWeight: 600, cursor: 'pointer',
+                  fontFamily: 'inherit',
+                }}>{c}</button>
+              );
+            })}
+          </div>
+        </div>
+
+        <label style={{
+          display: 'flex', alignItems: 'center', gap: 10,
+          padding: '10px 12px', borderRadius: 10,
+          background: alsoLine ? '#f4ead9' : '#fff',
+          border: '1px solid ' + (alsoLine ? '#e0cfa8' : 'rgba(24,20,15,0.08)'),
+          cursor: 'pointer', fontSize: 13,
+        }}>
+          <input type="checkbox" checked={alsoLine}
+            onChange={e => setAlsoLine(e.target.checked)}
+            style={{ width: 16, height: 16, accentColor: '#9b4722' }}/>
+          <span style={{ color: '#1d1a15', fontWeight: 500 }}>
+            Also create a linked budget line
+          </span>
+        </label>
+
+        {alsoLine && (
+          <div style={{
+            padding: 12, background: '#fff', borderRadius: 10,
+            border: '1px solid rgba(24,20,15,0.08)',
+            display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10,
+          }}>
+            <div>
+              <FieldLabel>Amount (EUR)</FieldLabel>
+              <input type="number" value={amount}
+                onChange={e => setAmount(e.target.value)}
+                style={fieldStyle()}/>
+            </div>
+            <div>
+              <FieldLabel>Status</FieldLabel>
+              <div style={{ display: 'flex', gap: 5 }}>
+                {statusOptions.map(s => {
+                  const active = lineStatus === s.key;
+                  return (
+                    <button key={s.key} onClick={() => setLineStatus(s.key)} style={{
+                      border: '1px solid ' + (active ? s.color : 'rgba(24,20,15,0.15)'),
+                      background: active ? s.color : '#fff',
+                      color: active ? '#fff' : s.color,
+                      padding: '6px 8px', borderRadius: 999,
+                      fontSize: 11, fontWeight: 600, cursor: 'pointer',
+                      fontFamily: 'inherit', flex: 1,
+                    }}>{s.label}</button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 4 }}>
+          <button onClick={onClose} style={{
+            border: 'none', background: 'transparent', color: '#7a7266',
+            padding: '8px 14px', borderRadius: 8, fontSize: 12,
+            cursor: 'pointer', fontFamily: 'inherit', fontWeight: 500,
+          }}>Cancel</button>
+          <button onClick={create} disabled={!text.trim()} style={{
+            background: text.trim() ? '#1d1a15' : 'rgba(24,20,15,0.3)',
+            color: '#fff', border: 'none',
+            padding: '8px 16px', borderRadius: 8, fontSize: 12,
+            fontWeight: 600, cursor: text.trim() ? 'pointer' : 'not-allowed',
+            fontFamily: 'inherit',
+          }}>Create</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function FieldLabel({ children }) {
+  return (
+    <div style={{
+      fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.8,
+      color: '#7a7266', marginBottom: 4,
+    }}>{children}</div>
+  );
+}
+
+function fieldStyle() {
+  return {
+    width: '100%', padding: '8px 10px', borderRadius: 8,
+    border: '1px solid rgba(24,20,15,0.15)', background: '#fff',
+    fontSize: 13, fontFamily: 'inherit', outline: 'none',
+  };
 }
 
 window.VariationA = VariationA;

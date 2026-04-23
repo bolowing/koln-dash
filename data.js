@@ -12,17 +12,25 @@
       destination: 'Köln',
       program: 'CBS — Cologne Business School',
       duration: 'Full academic year',
+      degrees: [
+        'B.Sc. Finance and Management (3+1)',
+        'B.Sc. International Business (3+1)',
+      ],
     },
 
     money: {
       totalBudget: 24854,
       sentUSD: 2000,
       fxEurUsd: 1.10,
+      fxEurIdr: 18200,
+      monthlyReleaseEUR: 992,
+      monthlyCostEUR: 600,
       lines: [
-        { id: 'm-fintiba', label: 'Fintiba blocked account', amountEUR: 11904, status: 'pending', note: 'Monthly €992 × 12 (Bürgschaft)' },
-        { id: 'm-tuition', label: 'CBS tuition — Wire 1 of 2', amountEUR: 10150, status: 'sent', note: '€2,000 wired · €8,150 pending' },
-        { id: 'm-setup',   label: 'One-time setup (flight, deposit, visa)', amountEUR: 2809, status: 'pending', note: 'Flight + Kaution + Visa fees' },
-        { id: 'm-living',  label: 'Monthly living (food, transit, phone)', amountEUR: 600, status: 'recurring', note: 'Est. €600/mo on top of Fintiba' },
+        { id: 'm-fintiba', label: 'Fintiba blocked account', amountEUR: 11904, status: 'pending', note: 'Monthly €992 × 12 (Bürgschaft)', taskIds: [] },
+        { id: 'm-tuition', label: 'CBS tuition — Wire 1 of 2', amountEUR: 2000, status: 'sent', note: 'Merrill 529 → CBS', taskIds: [] },
+        { id: 'm-tuition2',label: 'CBS tuition — Wire 2 of 2', amountEUR: 8150, status: 'pending', note: 'Remaining tuition balance', taskIds: ['j2'] },
+        { id: 'm-setup',   label: 'One-time setup (flight, deposit, visa)', amountEUR: 2809, status: 'pending', note: 'Flight + Kaution + Visa fees', taskIds: [] },
+        { id: 'm-living',  label: 'Monthly living (food, transit, phone)', amountEUR: 600, status: 'recurring', note: 'Est. €600/mo on top of Fintiba', taskIds: [] },
       ],
     },
 
@@ -142,7 +150,22 @@
     const eurToUsd = state.money.fxEurUsd;
     const totalEUR = state.money.lines.reduce((a, l) => a + (l.amountEUR || 0), 0);
     const sentEUR  = state.money.lines.filter(l => l.status==='sent').reduce((a,l) => a + l.amountEUR, 0);
-    return { totalEUR, sentEUR, eurToUsd };
+    const remainingEUR = totalEUR - sentEUR;
+    return { totalEUR, sentEUR, remainingEUR, eurToUsd };
+  }
+
+  function linkedTasks(state, line) {
+    const ids = (line && line.taskIds) || [];
+    if (!ids.length) return [];
+    const all = [
+      ...state.lanes.VJ.map(t => ({ ...t, lane: 'VJ' })),
+      ...state.lanes.Jul.map(t => ({ ...t, lane: 'Jul' })),
+    ];
+    return ids.map(id => all.find(t => t.id === id)).filter(Boolean);
+  }
+
+  function linkedLines(state, taskId) {
+    return state.money.lines.filter(l => (l.taskIds || []).includes(taskId));
   }
 
   window.KD_DEFAULTS = DEFAULTS;
@@ -150,6 +173,7 @@
   window.KD = {
     daysUntil, formatEUR, formatUSD, computeProgress,
     progressByCategory, laneProgress, moneyTotals,
+    linkedTasks, linkedLines,
     STORAGE_KEY,
   };
 })();
