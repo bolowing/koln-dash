@@ -190,6 +190,14 @@ function StackedBudgetBar({ lines, totalEUR }) {
   );
 }
 
+function PencilIcon() {
+  return (
+    <svg width="10" height="10" viewBox="0 0 12 12" fill="none" style={{ opacity: 0.6 }}>
+      <path d="M8.5 1.5l2 2-6.5 6.5H2v-2l6.5-6.5z" stroke="currentColor" strokeWidth="1.1" strokeLinejoin="round"/>
+    </svg>
+  );
+}
+
 function TaskDetailDrawer({ task, lane, state, setState, onClose }) {
   if (!task) return null;
   const checked = !!state.checked[task.id];
@@ -206,6 +214,31 @@ function TaskDetailDrawer({ task, lane, state, setState, onClose }) {
     return { ...s, notes: nextNotes };
   });
 
+  const updateTask = (patch) => setState(s => ({
+    ...s,
+    lanes: {
+      ...s.lanes,
+      [lane]: s.lanes[lane].map(t => t.id === task.id ? { ...t, ...patch } : t),
+    },
+  }));
+
+  const deleteTask = () => {
+    if (!confirm('Delete this task? This cannot be undone.')) return;
+    setState(s => {
+      const nextNotes = { ...s.notes };
+      const nextChecked = { ...s.checked };
+      delete nextNotes[task.id];
+      delete nextChecked[task.id];
+      return {
+        ...s,
+        lanes: { ...s.lanes, [lane]: s.lanes[lane].filter(t => t.id !== task.id) },
+        notes: nextNotes,
+        checked: nextChecked,
+      };
+    });
+    onClose();
+  };
+
   const postComment = () => {
     if (!draft.trim()) return;
     update(cur => ({
@@ -218,6 +251,13 @@ function TaskDetailDrawer({ task, lane, state, setState, onClose }) {
     }));
     setDraft('');
   };
+
+  const categoryNames = Object.keys(state.categories || KD_DEFAULTS.categories);
+  const urgencyOptions = [
+    { key: 'asap',  label: 'ASAP',  color: '#9a2f3f' },
+    { key: 'soon',  label: 'Soon',  color: '#b67417' },
+    { key: 'later', label: 'Later', color: '#7a7266' },
+  ];
 
   return (
     <div style={{
@@ -245,12 +285,82 @@ function TaskDetailDrawer({ task, lane, state, setState, onClose }) {
         </div>
 
         <div>
-          <div style={{ fontSize: 20, fontWeight: 500, lineHeight: 1.3, color: '#1d1a15' }}>
-            {task.text}
+          <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.8, color: '#7a7266', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
+            Task <PencilIcon/>
           </div>
-          <div style={{ marginTop: 10, display: 'flex', gap: 6, alignItems: 'center' }}>
-            <CategoryChip cat={task.cat} categories={state.categories || KD_DEFAULTS.categories} size="md"/>
-            <UrgencyPill urgency={task.urgency} due={task.due}/>
+          <div style={{
+            fontSize: 20, fontWeight: 500, lineHeight: 1.3, color: '#1d1a15',
+            border: '1px dashed rgba(24,20,15,0.12)', borderRadius: 8,
+            padding: '8px 10px', background: '#fff',
+          }}>
+            <EditableText
+              value={task.text}
+              onChange={(v) => { if (v.trim()) updateTask({ text: v.trim() }); }}
+              placeholder="Task title…"
+            />
+          </div>
+
+          <div style={{ marginTop: 14 }}>
+            <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.8, color: '#7a7266', marginBottom: 6 }}>
+              Category
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+              {categoryNames.map(c => {
+                const col = (state.categories || KD_DEFAULTS.categories)[c];
+                const active = task.cat === c;
+                return (
+                  <button key={c} onClick={() => updateTask({ cat: c })} style={{
+                    border: active ? '1px solid ' + col.color : '1px solid transparent',
+                    cursor: 'pointer',
+                    background: active ? col.color : col.bg,
+                    color: active ? '#fff' : col.color,
+                    padding: '4px 11px', borderRadius: 4,
+                    fontSize: 11, fontWeight: 600, letterSpacing: 0.2,
+                    fontFamily: 'inherit',
+                    opacity: active ? 1 : 0.85,
+                  }}>{c}</button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div style={{ marginTop: 12, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+            <div>
+              <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.8, color: '#7a7266', marginBottom: 6 }}>
+                Urgency
+              </div>
+              <div style={{ display: 'flex', gap: 5 }}>
+                {urgencyOptions.map(u => {
+                  const active = task.urgency === u.key;
+                  return (
+                    <button key={u.key} onClick={() => updateTask({ urgency: u.key })} style={{
+                      border: '1px solid ' + (active ? u.color : 'rgba(24,20,15,0.15)'),
+                      background: active ? u.color : 'transparent',
+                      color: active ? '#fff' : u.color,
+                      padding: '4px 11px', borderRadius: 999,
+                      fontSize: 11, fontWeight: 600, cursor: 'pointer',
+                      fontFamily: 'inherit',
+                    }}>{u.label}</button>
+                  );
+                })}
+              </div>
+            </div>
+            <div>
+              <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.8, color: '#7a7266', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
+                Due <PencilIcon/>
+              </div>
+              <div style={{
+                fontSize: 13, color: '#1d1a15', fontWeight: 500,
+                border: '1px dashed rgba(24,20,15,0.12)', borderRadius: 6,
+                padding: '5px 9px', background: '#fff',
+              }}>
+                <EditableText
+                  value={task.due}
+                  onChange={(v) => updateTask({ due: v.trim() || 'TBD' })}
+                  placeholder="TBD"
+                />
+              </div>
+            </div>
           </div>
         </div>
 
@@ -344,6 +454,17 @@ function TaskDetailDrawer({ task, lane, state, setState, onClose }) {
               }}>Post</button>
             </div>
           </div>
+        </div>
+
+        <div style={{
+          paddingTop: 12, borderTop: '1px solid rgba(24,20,15,0.08)',
+          display: 'flex', justifyContent: 'flex-end',
+        }}>
+          <button onClick={deleteTask} style={{
+            border: '1px solid rgba(154,47,63,0.3)', background: 'transparent',
+            color: '#9a2f3f', padding: '6px 12px', borderRadius: 8,
+            fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
+          }}>Delete task</button>
         </div>
       </div>
     </div>
