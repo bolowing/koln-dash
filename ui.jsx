@@ -52,7 +52,8 @@ function EditableNumber({ value, onChange, prefix='', suffix='', style }) {
   if (editing) {
     return (
       <input
-        autoFocus type="number" value={draft}
+        className="v1-editable-input"
+        autoFocus type="number" inputMode="decimal" value={draft}
         onChange={e => setDraft(e.target.value)}
         onBlur={() => { const n = parseFloat(draft); if (!isNaN(n)) onChange(n); setEditing(false); }}
         onKeyDown={e => { if (e.key === 'Enter') e.target.blur(); if (e.key === 'Escape') { setDraft(String(value)); setEditing(false); } }}
@@ -297,7 +298,7 @@ function TaskDetailDrawer({ task, lane, state, setState, onClose, onOpenLine }) 
       background: 'rgba(24,20,15,0.25)',
       backdropFilter: 'blur(2px)',
     }} onClick={onClose}>
-      <div style={{
+      <div className="v1-drawer" style={{
         width: 420, maxWidth: '90%', height: '100%',
         background: '#fbf8f3', borderLeft: '1px solid rgba(24,20,15,0.1)',
         boxShadow: '-20px 0 60px rgba(0,0,0,0.12)',
@@ -625,7 +626,7 @@ function LineDetailDrawer({ lineId, state, setState, onClose, onOpenTask }) {
       display: 'flex', justifyContent: 'flex-end',
       background: 'rgba(24,20,15,0.25)', backdropFilter: 'blur(2px)',
     }} onClick={onClose}>
-      <div style={{
+      <div className="v1-drawer" style={{
         width: 420, maxWidth: '90%', height: '100%',
         background: '#fbf8f3', borderLeft: '1px solid rgba(24,20,15,0.1)',
         boxShadow: '-20px 0 60px rgba(0,0,0,0.12)',

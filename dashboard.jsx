@@ -35,7 +35,7 @@ function VariationA({ onReset }) {
     .toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 
   return (
-    <div style={{
+    <div className="v1-root" style={{
       fontFamily: '"Instrument Serif", Georgia, serif',
       background: '#f5f1ea',
       color: '#1d1a15',
@@ -50,7 +50,7 @@ function VariationA({ onReset }) {
       `}</style>
 
       {/* Masthead */}
-      <header style={{
+      <header className="v1-masthead" style={{
         display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end',
         paddingBottom: 22, borderBottom: '1px solid rgba(24,20,15,0.12)',
         marginBottom: 28,
@@ -60,7 +60,7 @@ function VariationA({ onReset }) {
             fontSize: 10, letterSpacing: 2, textTransform: 'uppercase',
             color: '#9b4722', marginBottom: 4,
           }}>Study abroad · {new Date().toLocaleDateString('en-US', { weekday: 'long' })}</div>
-          <h1 style={{
+          <h1 className="v1-h1" style={{
             fontSize: 56, fontWeight: 400, lineHeight: 1,
             margin: 0, letterSpacing: -1,
           }}>
@@ -92,7 +92,7 @@ function VariationA({ onReset }) {
           )}
         </div>
 
-        <div className="va-sans" style={{
+        <div className="va-sans v1-masthead-right" style={{
           textAlign: 'right', fontSize: 12, color: '#57514a', lineHeight: 1.7,
         }}>
           <div style={{ color: '#7a7266' }}>Köln weather</div>
@@ -106,7 +106,7 @@ function VariationA({ onReset }) {
         display: 'grid', gridTemplateColumns: '1.1fr 1fr 1.2fr',
         gap: 18, marginBottom: 28,
       }}>
-        <div style={{
+        <div className="v1-days-card" style={{
           background: '#1d1a15', color: '#f5f1ea',
           borderRadius: 18, padding: '22px 26px',
           position: 'relative', overflow: 'hidden',
@@ -114,7 +114,7 @@ function VariationA({ onReset }) {
           <div className="va-mono" style={{
             fontSize: 10, letterSpacing: 2, textTransform: 'uppercase', opacity: 0.6,
           }}>Days until departure</div>
-          <div style={{
+          <div className="v1-days-num" style={{
             fontSize: 120, fontWeight: 400, lineHeight: 1, letterSpacing: -4,
             marginTop: 6, display: 'flex', alignItems: 'baseline', gap: 14,
           }}>
@@ -131,7 +131,7 @@ function VariationA({ onReset }) {
           </div>
         </div>
 
-        <div style={{
+        <div className="v1-ring-card" style={{
           background: '#fff', borderRadius: 18, padding: '22px 24px',
           display: 'flex', alignItems: 'center', gap: 18,
         }}>
@@ -155,18 +155,18 @@ function VariationA({ onReset }) {
       {/* Money */}
       <section style={{ marginBottom: 28 }}>
         <div style={{
-          display: 'flex', alignItems: 'baseline', gap: 14, marginBottom: 14,
+          display: 'flex', alignItems: 'baseline', flexWrap: 'wrap', gap: 14, marginBottom: 14,
         }}>
-          <h2 style={{ fontSize: 30, fontWeight: 400, margin: 0, letterSpacing: -0.5 }}>Money</h2>
+          <h2 className="v1-section-h2" style={{ fontSize: 30, fontWeight: 400, margin: 0, letterSpacing: -0.5 }}>Money</h2>
           <span className="va-sans" style={{ fontSize: 12, color: '#7a7266' }}>
             Total budget + what's moved so far
           </span>
         </div>
 
-        <div style={{
+        <div className="v1-money-card" style={{
           background: '#fff', borderRadius: 18, padding: '24px 26px',
         }}>
-          <div style={{
+          <div className="v1-money-stats" style={{
             display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 36,
             paddingBottom: 18, borderBottom: '1px dashed rgba(24,20,15,0.1)',
           }}>
@@ -235,17 +235,17 @@ function VariationA({ onReset }) {
 
       {/* Tasks */}
       <section style={{ marginBottom: 28 }}>
-        <div style={{
+        <div className="v1-tasks-head" style={{
           display: 'flex', alignItems: 'baseline', justifyContent: 'space-between',
           marginBottom: 14,
         }}>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 14 }}>
-            <h2 style={{ fontSize: 30, fontWeight: 400, margin: 0, letterSpacing: -0.5 }}>Tasks</h2>
+            <h2 className="v1-section-h2" style={{ fontSize: 30, fontWeight: 400, margin: 0, letterSpacing: -0.5 }}>Tasks</h2>
             <span className="va-sans" style={{ fontSize: 12, color: '#7a7266' }}>Tap a task to open · click the box to check off</span>
           </div>
-          <div className="va-sans" style={{ display: 'flex', gap: 4 }}>
+          <div className="va-sans" style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
             {[['all','All'],['asap','ASAP'],['mine','VJ'],['jul','Jul']].map(([k,label]) => (
-              <button key={k} onClick={() => setTab(k)} style={{
+              <button key={k} className="v1-tab-btn" onClick={() => setTab(k)} style={{
                 border: 'none',
                 background: tab === k ? '#1d1a15' : 'transparent',
                 color: tab === k ? '#fff' : '#57514a',
@@ -256,7 +256,7 @@ function VariationA({ onReset }) {
           </div>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }}>
+        <div className="v1-tasks-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }}>
           <Lane
             title="VJ's lane" lane="VJ"
             visible={tab === 'all' || tab === 'asap' || tab === 'mine'}
@@ -282,12 +282,12 @@ function VariationA({ onReset }) {
 
       {/* Readiness */}
       <section style={{ marginBottom: 12 }}>
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: 14, marginBottom: 14 }}>
-          <h2 style={{ fontSize: 30, fontWeight: 400, margin: 0, letterSpacing: -0.5 }}>Readiness</h2>
+        <div style={{ display: 'flex', alignItems: 'baseline', flexWrap: 'wrap', gap: 14, marginBottom: 14 }}>
+          <h2 className="v1-section-h2" style={{ fontSize: 30, fontWeight: 400, margin: 0, letterSpacing: -0.5 }}>Readiness</h2>
           <span className="va-sans" style={{ fontSize: 12, color: '#7a7266' }}>Readiness by category + timeline</span>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.6fr', gap: 18 }}>
+        <div className="v1-readiness-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1.6fr', gap: 18 }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {Object.entries(byCat).map(([cat, d]) => (
               <div key={cat} style={{
@@ -335,7 +335,7 @@ function VariationA({ onReset }) {
                 background: 'linear-gradient(#e8dfd3, #9b4722 30%, #1d1a15)',
               }}/>
               {state.upcoming.map((u, i) => (
-                <div key={i} className="va-sans" style={{
+                <div key={i} className="va-sans v1-timeline-row" style={{
                   position: 'relative', paddingLeft: 36, marginBottom: 14,
                   display: 'grid', gridTemplateColumns: '60px 1fr auto', gap: 12,
                   alignItems: 'center',
@@ -346,8 +346,8 @@ function VariationA({ onReset }) {
                     background: i === state.upcoming.length - 1 ? '#1d1a15' : '#fff',
                     border: '2px solid ' + (i === state.upcoming.length - 1 ? '#1d1a15' : '#9b4722'),
                   }}/>
-                  <div style={{ fontSize: 11, color: '#9b4722', fontWeight: 600, letterSpacing: 0.5 }}>{u.when}</div>
-                  <div style={{ fontSize: 13, color: '#1d1a15', fontWeight: 500 }}>{u.what}</div>
+                  <div className="v1-timeline-when" style={{ fontSize: 11, color: '#9b4722', fontWeight: 600, letterSpacing: 0.5 }}>{u.when}</div>
+                  <div className="v1-timeline-what" style={{ fontSize: 13, color: '#1d1a15', fontWeight: 500 }}>{u.what}</div>
                   <CategoryChip cat={u.cat} categories={cats}/>
                 </div>
               ))}
@@ -356,7 +356,7 @@ function VariationA({ onReset }) {
         </div>
       </section>
 
-      <footer className="va-sans" style={{
+      <footer className="va-sans v1-foot" style={{
         marginTop: 30, paddingTop: 16,
         borderTop: '1px solid rgba(24,20,15,0.08)',
         fontSize: 11, color: '#9b8f7f',
@@ -435,9 +435,9 @@ function StatusDot({ status }) {
   };
   const s = map[status] || { color: '#bbb', label: status };
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+    <div title={s.label} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
       <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: 999, background: s.color }}/>
-      <span style={{ fontSize: 11, color: '#57514a', fontWeight: 500, textTransform: 'uppercase', letterSpacing: 0.6 }}>
+      <span className="v1-status-label" style={{ fontSize: 11, color: '#57514a', fontWeight: 500, textTransform: 'uppercase', letterSpacing: 0.6 }}>
         {s.label}
       </span>
     </div>
@@ -493,7 +493,7 @@ function Lane({ title, lane, visible, filterASAP, state, onOpen, onAdd, onToggle
 function TaskRow({ t, checked, hasNotes, commentCount, linkedLineCount = 0, onOpen, onToggle, categories }) {
   return (
     <div
-      className="va-sans"
+      className="va-sans v1-task-row"
       style={{
         display: 'grid', gridTemplateColumns: '20px 1fr auto', gap: 10,
         padding: '9px 8px', borderRadius: 8, cursor: 'pointer',
@@ -503,7 +503,7 @@ function TaskRow({ t, checked, hasNotes, commentCount, linkedLineCount = 0, onOp
       onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
       onClick={() => onOpen(t)}
     >
-      <div onClick={e => { e.stopPropagation(); onToggle(t.id); }} style={{
+      <div className="v1-task-check" onClick={e => { e.stopPropagation(); onToggle(t.id); }} style={{
         width: 18, height: 18, borderRadius: 5, marginTop: 2,
         border: '1.5px solid ' + (checked ? '#2f7d5b' : 'rgba(24,20,15,0.35)'),
         background: checked ? '#2f7d5b' : 'transparent',
@@ -608,7 +608,7 @@ function AddLineDialog({ state, setState, onClose, categories }) {
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       background: 'rgba(24,20,15,0.35)', backdropFilter: 'blur(3px)',
     }} onClick={onClose}>
-      <div onClick={e => e.stopPropagation()} style={{
+      <div className="v1-dialog" onClick={e => e.stopPropagation()} style={{
         width: 480, maxWidth: '94%', background: '#fbf8f3',
         borderRadius: 16, padding: '22px 24px',
         display: 'flex', flexDirection: 'column', gap: 14,
@@ -846,7 +846,7 @@ function FxCalculator({ state, setState }) {
   const other = currencies.filter(c => c.key !== base);
 
   return (
-    <div style={{
+    <div className="v1-fx-card" style={{
       background: '#f4ead9', borderRadius: 18, padding: '18px 22px',
       display: 'flex', flexDirection: 'column', gap: 10, minHeight: 0,
     }}>
@@ -874,7 +874,8 @@ function FxCalculator({ state, setState }) {
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
         <span className="va-sans" style={{ fontSize: 16, color: '#8a5a2b', fontWeight: 500 }}>{baseSym}</span>
         <input
-          type="text" size={1}
+          className="v1-large-input"
+          type="text" size={1} inputMode="decimal"
           value={inputValue}
           onChange={e => {
             const raw = e.target.value.replace(/[^\d.-]/g, '');
@@ -990,7 +991,7 @@ function AddTaskDialog({ lane, state, setState, onClose, categories }) {
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       background: 'rgba(24,20,15,0.35)', backdropFilter: 'blur(3px)',
     }} onClick={onClose}>
-      <div onClick={e => e.stopPropagation()} style={{
+      <div className="v1-dialog" onClick={e => e.stopPropagation()} style={{
         width: 480, maxWidth: '94%', background: '#fbf8f3',
         borderRadius: 16, padding: '22px 24px',
         display: 'flex', flexDirection: 'column', gap: 14,
