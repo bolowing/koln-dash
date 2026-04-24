@@ -208,8 +208,59 @@ function GermanDude({ size = 52, hopping = false, waving = false }) {
   );
 }
 
-function FundingProgress({ sentEUR, totalEUR }) {
-  const pct = totalEUR > 0 ? (sentEUR / totalEUR) * 100 : 0;
+// Picks a short, state-aware motivating line for the Bavarian dude.
+// Deterministic per-day so it doesn't flicker on re-render, but rotates daily.
+function pickDudeAdvice(state, progress, byCat) {
+  const allTasks = [...state.lanes.VJ, ...state.lanes.Jul];
+  const asap = allTasks.filter(t => t.urgency === 'asap' && !state.checked[t.id]);
+  const days = KD.daysUntil(state.meta.departure);
+  const seed = new Date().toISOString().slice(0, 10);
+  const hash = [...seed].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7);
+  const pick = (arr) => arr[hash % arr.length];
+
+  if (progress.total > 0 && progress.pct >= 100) {
+    return pick([
+      "Alles fertig! Kölsch is on me.",
+      "Packed and ready. Servus, Köln.",
+      "Done. I'll see you at the Dom.",
+    ]);
+  }
+  if (asap.length >= 5) {
+    return pick([
+      `${asap.length} ASAP tasks staring you down. Knock out two today.`,
+      `Erstmal die ASAPs — ${asap.length} sitting in the queue.`,
+      `${asap.length} ASAPs. One at a time, mein Freund.`,
+    ]);
+  }
+  const justDone = Object.entries(byCat).find(([, d]) => d.total > 0 && d.pct === 100);
+  if (justDone && progress.pct < 100) {
+    return pick([
+      `${justDone[0]} fully done — Prost!`,
+      `${justDone[0]}: abgehakt. Weiter geht's.`,
+    ]);
+  }
+  if (days > 90 && progress.pct < 25) {
+    return pick([
+      "Plenty of time, ja — but don't let the visa office catch you lazy.",
+      "Slow start is fine. Just don't make it a habit.",
+    ]);
+  }
+  if (days < 60 && progress.pct < 60) {
+    return pick([
+      `Only ${days} days. Schnell, schnell!`,
+      `${days} days out and still on the back foot. Let's move.`,
+    ]);
+  }
+  if (progress.pct < 25) return pick(["Kick-off! One task beats zero.", "The hardest one is the first."]);
+  if (progress.pct < 50) return pick(["Momentum building. Keep it up.", "Halfway to halfway. Nicht schlecht."]);
+  if (progress.pct < 75) return pick(["Over the hump. I can smell the Kölsch.", "Home stretch incoming."]);
+  return pick(["Almost packed. The Dom awaits.", "A few more boxes between you and me."]);
+}
+
+function OverallProgress({ state }) {
+  const progress = KD.computeProgress(state);
+  const byCat = KD.progressByCategory(state);
+  const pct = progress.pct;
   const pctRounded = Math.round(pct);
   const [hopping, setHopping] = React.useState(false);
   const hopTimer = React.useRef(null);
@@ -228,6 +279,9 @@ function FundingProgress({ sentEUR, totalEUR }) {
   }, []);
 
   const dudePos = Math.max(0, Math.min(100, pct));
+  // Clamp bubble anchor so it doesn't overflow the card edges.
+  const bubblePos = Math.max(14, Math.min(86, dudePos));
+  const advice = pickDudeAdvice(state, progress, byCat);
 
   return (
     <div style={{ paddingBottom: 18, borderBottom: '1px dashed rgba(24,20,15,0.1)', marginBottom: 18 }}>
@@ -247,6 +301,10 @@ function FundingProgress({ sentEUR, totalEUR }) {
           0%,100% { transform: rotate(0deg); }
           50%     { transform: rotate(-8deg); }
         }
+        @keyframes kd-bubble-in {
+          0%   { opacity: 0; transform: translate(-50%, 4px) scale(0.94); }
+          100% { opacity: 1; transform: translate(-50%, 0) scale(1); }
+        }
       `}</style>
 
       <div style={{
@@ -256,15 +314,60 @@ function FundingProgress({ sentEUR, totalEUR }) {
         <div className="va-mono" style={{
           fontSize: 10, letterSpacing: 2, textTransform: 'uppercase',
           color: P.accent, fontWeight: 600,
-        }}>Funding progress</div>
+        }}>Overall progress</div>
         <div className="va-sans" style={{ fontSize: 13, color: P.dimStrong }}>
-          <span style={{ fontWeight: 600, color: P.ink }}>€{sentEUR.toLocaleString('de-DE')}</span>
-          <span style={{ color: P.dim }}> of €{totalEUR.toLocaleString('de-DE')} · </span>
+          <span style={{ fontWeight: 600, color: P.ink }}>{progress.done}</span>
+          <span style={{ color: P.dim }}> of {progress.total} tasks · </span>
           <span style={{ color: P.accent, fontWeight: 600 }}>{pctRounded}%</span>
         </div>
       </div>
 
-      <div style={{ position: 'relative', height: 64 }}>
+      <div style={{ position: 'relative', height: 112, paddingTop: 48 }}>
+        {/* Speech bubble, anchored near the dude's head */}
+        <div key={advice} style={{
+          position: 'absolute',
+          left: `${bubblePos}%`,
+          top: 0,
+          transform: 'translateX(-50%)',
+          maxWidth: 260,
+          animation: 'kd-bubble-in 0.35s ease',
+          pointerEvents: 'none',
+          zIndex: 3,
+        }}>
+          <div className="va-sans" style={{
+            position: 'relative',
+            background: P.card,
+            color: P.ink,
+            border: `1px solid ${P.lineMid}`,
+            borderRadius: 14,
+            padding: '8px 12px',
+            fontSize: 12.5,
+            lineHeight: 1.4,
+            fontStyle: 'italic',
+            boxShadow: '0 4px 14px rgba(24,20,15,0.08)',
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            maxWidth: 260,
+          }}>
+            <span style={{ color: P.accent, marginRight: 6 }}>“</span>
+            {advice}
+            <span style={{ color: P.accent, marginLeft: 4 }}>”</span>
+            {/* Pointer — centered on the bubble (which is clamped), angled toward the dude */}
+            <div style={{
+              position: 'absolute',
+              left: `${Math.max(8, Math.min(92, 50 + (dudePos - bubblePos)))}%`,
+              bottom: -6,
+              transform: 'translateX(-50%) rotate(45deg)',
+              width: 10, height: 10,
+              background: P.card,
+              borderRight: `1px solid ${P.lineMid}`,
+              borderBottom: `1px solid ${P.lineMid}`,
+            }}/>
+          </div>
+        </div>
+
+        {/* The dude walks the bar */}
         <div style={{
           position: 'absolute',
           left: `${dudePos}%`,
@@ -283,7 +386,7 @@ function FundingProgress({ sentEUR, totalEUR }) {
         }}>
           <div style={{
             width: `${pct}%`, height: '100%',
-            background: 'linear-gradient(90deg, #c8985f 0%, #9b4722 100%)',
+            background: 'linear-gradient(90deg, #e8b07e 0%, #c14a1c 100%)',
             transition: 'width 0.7s cubic-bezier(.4,.6,.3,1)',
             borderRadius: 999,
           }}/>
@@ -297,6 +400,39 @@ function FundingProgress({ sentEUR, totalEUR }) {
       }}>
         <span style={{ color: P.dim }}>Jakarta, Indonesia</span>
         <span style={{ color: P.accent, fontWeight: 600 }}>Köln →</span>
+      </div>
+    </div>
+  );
+}
+
+function FundingProgress({ sentEUR, totalEUR }) {
+  const pct = totalEUR > 0 ? (sentEUR / totalEUR) * 100 : 0;
+  const pctRounded = Math.round(pct);
+  return (
+    <div style={{ paddingBottom: 18, borderBottom: '1px dashed rgba(24,20,15,0.1)', marginBottom: 18 }}>
+      <div style={{
+        display: 'flex', justifyContent: 'space-between', alignItems: 'baseline',
+        marginBottom: 10, gap: 12, flexWrap: 'wrap',
+      }}>
+        <div className="va-mono" style={{
+          fontSize: 10, letterSpacing: 2, textTransform: 'uppercase',
+          color: P.accent, fontWeight: 600,
+        }}>Funding progress</div>
+        <div className="va-sans" style={{ fontSize: 13, color: P.dimStrong }}>
+          <span style={{ fontWeight: 600, color: P.ink }}>€{sentEUR.toLocaleString('de-DE')}</span>
+          <span style={{ color: P.dim }}> of €{totalEUR.toLocaleString('de-DE')} · </span>
+          <span style={{ color: P.accent, fontWeight: 600 }}>{pctRounded}%</span>
+        </div>
+      </div>
+      <div style={{
+        height: 8, borderRadius: 999, background: P.lineSoft, overflow: 'hidden',
+      }}>
+        <div style={{
+          width: `${pct}%`, height: '100%',
+          background: 'linear-gradient(90deg, #c8985f 0%, #9b4722 100%)',
+          transition: 'width 0.7s cubic-bezier(.4,.6,.3,1)',
+          borderRadius: 999,
+        }}/>
       </div>
     </div>
   );
@@ -591,7 +727,7 @@ function TaskDetailDrawer({ task, lane, state, setState, onClose, onOpenLine }) 
             )}
             {(noteObj.comments || []).map(c => (
               <div key={c.id} style={{
-                background: c.author === 'VJ' ? '#f4ead9' : '#e1ecf7',
+                background: c.author === 'VJ' ? '#e7f2ec' : P.accentSoft,
                 borderRadius: 10, padding: '8px 12px',
                 alignSelf: c.author === 'VJ' ? 'flex-start' : 'flex-end',
                 maxWidth: '85%',
@@ -936,6 +1072,6 @@ function LineDetailDrawer({ lineId, state, setState, onClose, onOpenTask }) {
 
 Object.assign(window, {
   CategoryChip, UrgencyPill,
-  EditableNumber, EditableText, RingProgress, StackedBudgetBar, FundingProgress,
+  EditableNumber, EditableText, RingProgress, StackedBudgetBar, FundingProgress, OverallProgress,
   TaskDetailDrawer, LineDetailDrawer, LinkedLinesBlock, PencilIcon,
 });

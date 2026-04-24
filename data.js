@@ -28,25 +28,25 @@
   const URGENCY_COLOR = Object.fromEntries(URGENCY_OPTIONS.map(o => [o.key, o.color]));
 
   const PALETTE = {
-    paper:    '#f5f1ea',
-    card:     '#ffffff',
-    drawer:   '#fbf8f3',
-    hover:    '#faf6ef',
-    ink:      '#1d1a15',
-    dimStrong:'#57514a',
-    dim:      '#7a7266',
-    dimSoft:  '#a8a095',
-    accent:   '#9b4722',
-    accentSoft: '#e8dfd3',
-    danger:   '#9a2f3f',
-    success:  '#2f7d5b',
-    lineSoft:   'rgba(24,20,15,0.06)',
-    line:       'rgba(24,20,15,0.08)',
-    lineMid:    'rgba(24,20,15,0.12)',
-    lineStrong: 'rgba(24,20,15,0.15)',
-    lineDashed: 'rgba(24,20,15,0.18)',
-    overlay:       'rgba(24,20,15,0.25)',
-    overlayStrong: 'rgba(24,20,15,0.35)',
+    paper:    '#f5efe4',
+    card:     '#fffaf1',
+    drawer:   '#fbf5e9',
+    hover:    '#f0e7d4',
+    ink:      '#1a120a',
+    dimStrong:'#4d3f31',
+    dim:      '#7a6a55',
+    dimSoft:  '#b0a288',
+    accent:   '#c14a1c',
+    accentSoft: '#f4e0cb',
+    danger:   '#a02a2a',
+    success:  '#3f7a3a',
+    lineSoft:   'rgba(26,18,10,0.06)',
+    line:       'rgba(26,18,10,0.09)',
+    lineMid:    'rgba(26,18,10,0.13)',
+    lineStrong: 'rgba(26,18,10,0.17)',
+    lineDashed: 'rgba(26,18,10,0.20)',
+    overlay:       'rgba(26,18,10,0.28)',
+    overlayStrong: 'rgba(26,18,10,0.42)',
   };
 
   const DEFAULTS = {
@@ -81,25 +81,25 @@
     },
 
     categories: {
-      Documents: { color: '#2f7d5b', bg: '#e7f2ec', emoji: '\u{1F4C4}' },
-      Financial: { color: '#8a5a2b', bg: '#f4ead9', emoji: '\u{1F4B8}' },
-      Housing:   { color: '#7a4da8', bg: '#efe6f7', emoji: '\u{1F3E0}' },
-      Banking:   { color: '#2b5a8a', bg: '#e1ecf7', emoji: '\u{1F3E6}' },
-      Travel:    { color: '#a83d5a', bg: '#f7e1e8', emoji: '✈️' },
+      'Visa docs': { color: '#2f7d5b', bg: '#e7f2ec', emoji: '\u{1F4C4}' },
+      Financial:   { color: '#8a5a2b', bg: '#f4ead9', emoji: '\u{1F4B8}' },
+      Housing:     { color: '#7a4da8', bg: '#efe6f7', emoji: '\u{1F3E0}' },
+      Banking:     { color: '#2b5a8a', bg: '#e1ecf7', emoji: '\u{1F3E6}' },
+      Travel:      { color: '#a83d5a', bg: '#f7e1e8', emoji: '✈️' },
     },
 
     lanes: {
       VJ: [
         { id: 't1',  text: 'Share Fintiba details + wire instructions', cat: 'Financial', due: 'May 1', urgency: 'soon' },
         { id: 't2',  text: 'Apply for Visa credit card (Indonesian bank)', cat: 'Banking', due: 'Pre-departure', urgency: 'soon' },
-        { id: 't3',  text: 'Confirm JIS registrar signature on HS cert', cat: 'Documents', due: 'ASAP', urgency: 'asap' },
-        { id: 't4',  text: 'Apostille + translate birth certificate', cat: 'Documents', due: 'ASAP', urgency: 'asap' },
-        { id: 't5',  text: 'Apostille + translate HS cert + report', cat: 'Documents', due: 'ASAP', urgency: 'asap' },
-        { id: 't6',  text: 'Request BINUS double degree letter', cat: 'Documents', due: 'ASAP', urgency: 'asap' },
-        { id: 't7',  text: 'Request final BINUS transcript', cat: 'Documents', due: 'ASAP', urgency: 'asap' },
-        { id: 't8',  text: 'Write motivation letter (signed + dated)', cat: 'Documents', due: 'ASAP', urgency: 'asap' },
-        { id: 't9',  text: 'Prepare CV (with photo + signature)', cat: 'Documents', due: 'ASAP', urgency: 'asap' },
-        { id: 't10', text: 'Get language certificates (CBS + BINUS)', cat: 'Documents', due: 'ASAP', urgency: 'asap' },
+        { id: 't3',  text: 'Confirm JIS registrar signature on HS cert', cat: 'Visa docs', due: 'ASAP', urgency: 'asap' },
+        { id: 't4',  text: 'Apostille + translate birth certificate', cat: 'Visa docs', due: 'ASAP', urgency: 'asap' },
+        { id: 't5',  text: 'Apostille + translate HS cert + report', cat: 'Visa docs', due: 'ASAP', urgency: 'asap' },
+        { id: 't6',  text: 'Request BINUS double degree letter', cat: 'Visa docs', due: 'ASAP', urgency: 'asap' },
+        { id: 't7',  text: 'Request final BINUS transcript', cat: 'Visa docs', due: 'ASAP', urgency: 'asap' },
+        { id: 't8',  text: 'Write motivation letter (signed + dated)', cat: 'Visa docs', due: 'ASAP', urgency: 'asap' },
+        { id: 't9',  text: 'Prepare CV (with photo + signature)', cat: 'Visa docs', due: 'ASAP', urgency: 'asap' },
+        { id: 't10', text: 'Get language certificates (CBS + BINUS)', cat: 'Visa docs', due: 'ASAP', urgency: 'asap' },
         { id: 't11', text: 'Find housing — send Jul links + est. rent', cat: 'Housing', due: 'ASAP', urgency: 'asap' },
         { id: 't12', text: 'Open German current account', cat: 'Banking', due: 'On arrival', urgency: 'later' },
       ],
@@ -115,7 +115,7 @@
       { when: 'May 1',  what: 'Confirm Wire 1 received',   cat: 'Financial' },
       { when: 'May',    what: 'Send Wire 2 to CBS',        cat: 'Financial' },
       { when: 'Jun',    what: 'Fund Fintiba account',      cat: 'Financial' },
-      { when: 'Jul',    what: 'Docs apostilled + shipped', cat: 'Documents' },
+      { when: 'Jul',    what: 'Docs apostilled + shipped', cat: 'Visa docs' },
       { when: 'Aug',    what: 'Visa appointment · Berlin', cat: 'Travel' },
       { when: 'Aug',    what: 'Sign housing contract',     cat: 'Housing' },
       { when: 'Sep 1',  what: 'Fly Köln + move-in',        cat: 'Travel' },
@@ -134,6 +134,24 @@
         const raw = localStorage.getItem(STORAGE_KEY);
         if (raw) {
           const parsed = JSON.parse(raw);
+          // Migration: 'Documents' category was renamed to 'Visa docs'. Rewrite
+          // the category map and any task.cat references so older saved state
+          // keeps working.
+          if (parsed.categories && parsed.categories.Documents && !parsed.categories['Visa docs']) {
+            parsed.categories = { ...parsed.categories, 'Visa docs': parsed.categories.Documents };
+            delete parsed.categories.Documents;
+          }
+          const renameCat = (t) => t.cat === 'Documents' ? { ...t, cat: 'Visa docs' } : t;
+          if (parsed.lanes) {
+            parsed.lanes = {
+              ...parsed.lanes,
+              VJ:  (parsed.lanes.VJ  || []).map(renameCat),
+              Jul: (parsed.lanes.Jul || []).map(renameCat),
+            };
+          }
+          if (Array.isArray(parsed.upcoming)) {
+            parsed.upcoming = parsed.upcoming.map(u => u.cat === 'Documents' ? { ...u, cat: 'Visa docs' } : u);
+          }
           // Deep-merge categories per-key so persisted categories from older
           // state versions still pick up new fields (e.g. emoji).
           const mergedCats = { ...DEFAULTS.categories };
