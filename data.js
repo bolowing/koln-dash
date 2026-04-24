@@ -145,8 +145,25 @@
     return { totalEUR, sentEUR, eurToUsd };
   }
 
+  function useIsMobile(breakpoint = 720) {
+    const [isMobile, setIsMobile] = React.useState(() =>
+      typeof window !== 'undefined' && window.innerWidth <= breakpoint
+    );
+    React.useEffect(() => {
+      const onResize = () => setIsMobile(window.innerWidth <= breakpoint);
+      window.addEventListener('resize', onResize);
+      window.addEventListener('orientationchange', onResize);
+      return () => {
+        window.removeEventListener('resize', onResize);
+        window.removeEventListener('orientationchange', onResize);
+      };
+    }, [breakpoint]);
+    return isMobile;
+  }
+
   window.KD_DEFAULTS = DEFAULTS;
   window.useKDState = useKDState;
+  window.useIsMobile = useIsMobile;
   window.KD = {
     daysUntil, formatEUR, formatUSD, computeProgress,
     progressByCategory, laneProgress, moneyTotals,

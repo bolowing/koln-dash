@@ -52,13 +52,14 @@ function EditableNumber({ value, onChange, prefix='', suffix='', style }) {
   if (editing) {
     return (
       <input
-        autoFocus type="number" value={draft}
+        autoFocus type="number" inputMode="decimal" value={draft}
         onChange={e => setDraft(e.target.value)}
         onBlur={() => { const n = parseFloat(draft); if (!isNaN(n)) onChange(n); setEditing(false); }}
         onKeyDown={e => { if (e.key === 'Enter') e.target.blur(); if (e.key === 'Escape') { setDraft(String(value)); setEditing(false); } }}
         style={{
           font: 'inherit', color: 'inherit', border: '1.5px solid #9b4722',
-          borderRadius: 6, padding: '2px 6px', width: 140,
+          borderRadius: 6, padding: '2px 6px',
+          width: '100%', maxWidth: 140,
           background: '#fff', outline: 'none',
           ...style,
         }}
@@ -200,6 +201,7 @@ function PencilIcon() {
 
 function TaskDetailDrawer({ task, lane, state, setState, onClose }) {
   if (!task) return null;
+  const isMobile = useIsMobile();
   const checked = !!state.checked[task.id];
   const noteObj = state.notes[task.id] || { text: '', comments: [] };
   const [draft, setDraft] = React.useState('');
@@ -267,10 +269,15 @@ function TaskDetailDrawer({ task, lane, state, setState, onClose }) {
       backdropFilter: 'blur(2px)',
     }} onClick={onClose}>
       <div style={{
-        width: 420, maxWidth: '90%', height: '100%',
-        background: '#fbf8f3', borderLeft: '1px solid rgba(24,20,15,0.1)',
+        width: isMobile ? '100%' : 420,
+        maxWidth: '100%',
+        height: '100%',
+        background: '#fbf8f3',
+        borderLeft: isMobile ? 'none' : '1px solid rgba(24,20,15,0.1)',
         boxShadow: '-20px 0 60px rgba(0,0,0,0.12)',
-        padding: '24px 26px', overflowY: 'auto',
+        padding: isMobile ? '18px 18px calc(18px + env(safe-area-inset-bottom))' : '24px 26px',
+        overflowY: 'auto',
+        WebkitOverflowScrolling: 'touch',
         display: 'flex', flexDirection: 'column', gap: 18,
       }} onClick={e => e.stopPropagation()}>
 
@@ -278,9 +285,14 @@ function TaskDetailDrawer({ task, lane, state, setState, onClose }) {
           <div style={{ fontSize: 11, letterSpacing: 0.8, color: '#7a7266', textTransform: 'uppercase' }}>
             {lane}'s lane · {task.urgency === 'asap' ? 'ASAP' : task.due}
           </div>
-          <button onClick={onClose} style={{
-            border: 'none', background: 'transparent', fontSize: 20,
-            cursor: 'pointer', color: '#7a7266', padding: 0, lineHeight: 1,
+          <button onClick={onClose} aria-label="Close" style={{
+            border: 'none', background: 'transparent',
+            fontSize: isMobile ? 28 : 20,
+            cursor: 'pointer', color: '#7a7266',
+            padding: isMobile ? '4px 8px' : 0,
+            marginRight: isMobile ? -8 : 0,
+            marginTop: isMobile ? -4 : 0,
+            lineHeight: 1,
           }}>×</button>
         </div>
 
@@ -304,7 +316,7 @@ function TaskDetailDrawer({ task, lane, state, setState, onClose }) {
             <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.8, color: '#7a7266', marginBottom: 6 }}>
               Category
             </div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: isMobile ? 6 : 5 }}>
               {categoryNames.map(c => {
                 const col = (state.categories || KD_DEFAULTS.categories)[c];
                 const active = task.cat === c;
@@ -314,8 +326,8 @@ function TaskDetailDrawer({ task, lane, state, setState, onClose }) {
                     cursor: 'pointer',
                     background: active ? col.color : col.bg,
                     color: active ? '#fff' : col.color,
-                    padding: '4px 11px', borderRadius: 4,
-                    fontSize: 11, fontWeight: 600, letterSpacing: 0.2,
+                    padding: isMobile ? '7px 12px' : '4px 11px', borderRadius: 4,
+                    fontSize: isMobile ? 12 : 11, fontWeight: 600, letterSpacing: 0.2,
                     fontFamily: 'inherit',
                     opacity: active ? 1 : 0.85,
                   }}>{c}</button>
@@ -324,12 +336,17 @@ function TaskDetailDrawer({ task, lane, state, setState, onClose }) {
             </div>
           </div>
 
-          <div style={{ marginTop: 12, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+          <div style={{
+            marginTop: 12,
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr',
+            gap: isMobile ? 10 : 14,
+          }}>
             <div>
               <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.8, color: '#7a7266', marginBottom: 6 }}>
                 Urgency
               </div>
-              <div style={{ display: 'flex', gap: 5 }}>
+              <div style={{ display: 'flex', gap: isMobile ? 6 : 5, flexWrap: 'wrap' }}>
                 {urgencyOptions.map(u => {
                   const active = task.urgency === u.key;
                   return (
@@ -337,8 +354,8 @@ function TaskDetailDrawer({ task, lane, state, setState, onClose }) {
                       border: '1px solid ' + (active ? u.color : 'rgba(24,20,15,0.15)'),
                       background: active ? u.color : 'transparent',
                       color: active ? '#fff' : u.color,
-                      padding: '4px 11px', borderRadius: 999,
-                      fontSize: 11, fontWeight: 600, cursor: 'pointer',
+                      padding: isMobile ? '7px 12px' : '4px 11px', borderRadius: 999,
+                      fontSize: isMobile ? 12 : 11, fontWeight: 600, cursor: 'pointer',
                       fontFamily: 'inherit',
                     }}>{u.label}</button>
                   );

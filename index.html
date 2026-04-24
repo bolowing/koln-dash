@@ -9,10 +9,15 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
 <style>
   html, body, #root { margin: 0; padding: 0; }
-  body { background: #e6dfd2; font-family: 'Inter', sans-serif; }
+  html { -webkit-text-size-adjust: 100%; }
+  body { background: #e6dfd2; font-family: 'Inter', sans-serif; overflow-x: hidden; }
   * { box-sizing: border-box; }
   #root { min-height: 100vh; }
   .v1-wrap { max-width: 1240px; margin: 0 auto; }
+  /* Prevent iOS auto-zoom on input focus by enforcing 16px minimum */
+  @media (max-width: 720px) {
+    input, textarea, select { font-size: 16px !important; }
+  }
 </style>
 <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" crossorigin="anonymous"></script>
