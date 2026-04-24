@@ -428,12 +428,8 @@ function MoneyStat({ label, value, sub }) {
 }
 
 function StatusDot({ status }) {
-  const map = {
-    sent:      { color: '#2f7d5b', label: 'Sent' },
-    pending:   { color: '#d98a45', label: 'Pending' },
-    recurring: { color: '#6b7b8c', label: 'Recurring' },
-  };
-  const s = map[status] || { color: '#bbb', label: status };
+  const opt = KD.statusOptions.find(o => o.key === status);
+  const s = opt ? { color: opt.color, label: opt.label } : { color: '#bbb', label: status };
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
       <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: 999, background: s.color }}/>
@@ -561,16 +557,8 @@ function AddLineDialog({ state, setState, onClose, categories }) {
   const [taskUrgency, setTaskUrgency] = React.useState('soon');
 
   const catNames = Object.keys(categories);
-  const statusOptions = [
-    { key: 'sent',      label: 'Sent',      color: '#2f7d5b' },
-    { key: 'pending',   label: 'Pending',   color: '#d98a45' },
-    { key: 'recurring', label: 'Recurring', color: '#6b7b8c' },
-  ];
-  const urgencyOptions = [
-    { key: 'asap',  label: 'ASAP',  color: '#9a2f3f' },
-    { key: 'soon',  label: 'Soon',  color: '#b67417' },
-    { key: 'later', label: 'Later', color: '#7a7266' },
-  ];
+  const statusOptions = KD.statusOptions;
+  const urgencyOptions = KD.urgencyOptions;
 
   const create = () => {
     if (!label.trim()) return;
@@ -795,24 +783,8 @@ function FxCalculator({ state, setState }) {
 
   const refresh = async () => {
     setFetching(true); setError(null);
-    try {
-      const res = await fetch('https://open.er-api.com/v6/latest/EUR');
-      const data = await res.json();
-      if (data && data.result === 'success' && data.rates) {
-        setState(s => ({
-          ...s, money: {
-            ...s.money,
-            fxEurUsd: data.rates.USD || s.money.fxEurUsd,
-            fxEurIdr: data.rates.IDR || s.money.fxEurIdr,
-            fxUpdatedAt: new Date().toISOString(),
-          },
-        }));
-      } else {
-        setError('failed');
-      }
-    } catch (e) {
-      setError('offline');
-    }
+    const result = await KD.refreshExchangeRates(setState);
+    if (result !== 'ok') setError(result);
     setFetching(false);
   };
 
@@ -939,16 +911,8 @@ function AddTaskDialog({ lane, state, setState, onClose, categories }) {
   const [lineStatus, setLineStatus] = React.useState('pending');
 
   const catNames = Object.keys(categories);
-  const urgencyOptions = [
-    { key: 'asap',  label: 'ASAP',  color: '#9a2f3f' },
-    { key: 'soon',  label: 'Soon',  color: '#b67417' },
-    { key: 'later', label: 'Later', color: '#7a7266' },
-  ];
-  const statusOptions = [
-    { key: 'sent',      label: 'Sent',      color: '#2f7d5b' },
-    { key: 'pending',   label: 'Pending',   color: '#d98a45' },
-    { key: 'recurring', label: 'Recurring', color: '#6b7b8c' },
-  ];
+  const urgencyOptions = KD.urgencyOptions;
+  const statusOptions = KD.statusOptions;
 
   const create = () => {
     if (!text.trim()) return;

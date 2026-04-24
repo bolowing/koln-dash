@@ -1,1 +1,22 @@
+# Editors / OS
+.DS_Store
+.vscode/
+.idea/
+*.swp
+
+# Logs
+*.log
+npm-debug.log*
+
+# Deps / build artifacts (for when we add a build step)
+node_modules/
+dist/
+build/
+
+# Env files
+.env
+.env.local
+.env.*.local
+
+# Deploy
 .vercel

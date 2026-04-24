@@ -1,8 +1,42 @@
 // Shared data model for the Köln dashboard.
 // Exposes window.KD_DEFAULTS, window.useKDState, and window.KD (helpers).
+//
+// State shape (JSDoc, for IDE hints only — no TS build step):
+// @typedef {'sent'|'pending'|'recurring'} LineStatus
+// @typedef {'asap'|'soon'|'later'} Urgency
+// @typedef {{ id:string, text:string, cat:string, due:string, urgency:Urgency }} Task
+// @typedef {{ id:string, label:string, amountEUR:number, status:LineStatus, note:string, taskIds:string[] }} MoneyLine
+// @typedef {{ id:string, author:string, text:string, at:string }} Comment
+// @typedef {{ text:string, comments:Comment[] }} NoteEntry
+// @typedef {{ meta:object, money:object, categories:object, lanes:{VJ:Task[],Jul:Task[]}, upcoming:object[], notes:Record<string,NoteEntry>, checked:Record<string,boolean> }} KDState
 
 (function() {
   const DEPARTURE = '2026-09-01';
+
+  // Shared option/color tables. Single source of truth for status + urgency tokens.
+  const STATUS_OPTIONS = [
+    { key: 'sent',      label: 'Sent',      color: '#2f7d5b' },
+    { key: 'pending',   label: 'Pending',   color: '#d98a45' },
+    { key: 'recurring', label: 'Recurring', color: '#6b7b8c' },
+  ];
+  const URGENCY_OPTIONS = [
+    { key: 'asap',  label: 'ASAP',  color: '#9a2f3f' },
+    { key: 'soon',  label: 'Soon',  color: '#b67417' },
+    { key: 'later', label: 'Later', color: '#7a7266' },
+  ];
+  const STATUS_COLOR  = Object.fromEntries(STATUS_OPTIONS.map(o => [o.key, o.color]));
+  const URGENCY_COLOR = Object.fromEntries(URGENCY_OPTIONS.map(o => [o.key, o.color]));
+
+  const PALETTE = {
+    paper:  '#f5f1ea',
+    card:   '#ffffff',
+    ink:    '#1d1a15',
+    dim:    '#7a7266',
+    line:   'rgba(24,20,15,0.08)',
+    accent: '#9b4722',
+    accentSoft: '#e8dfd3',
+    danger: '#9a2f3f',
+  };
 
   const DEFAULTS = {
     meta: {
@@ -168,12 +202,42 @@
     return state.money.lines.filter(l => (l.taskIds || []).includes(taskId));
   }
 
+  // Pulls fresh EUR→USD / EUR→IDR from open.er-api.com and merges into state.
+  // Returns 'ok' | 'failed' | 'offline' so the caller can render a status label.
+  async function refreshExchangeRates(setState) {
+    try {
+      const res = await fetch('https://open.er-api.com/v6/latest/EUR');
+      const data = await res.json();
+      if (data && data.result === 'success' && data.rates) {
+        setState(s => ({
+          ...s,
+          money: {
+            ...s.money,
+            fxEurUsd: data.rates.USD || s.money.fxEurUsd,
+            fxEurIdr: data.rates.IDR || s.money.fxEurIdr,
+            fxUpdatedAt: new Date().toISOString(),
+          },
+        }));
+        return 'ok';
+      }
+      return 'failed';
+    } catch (e) {
+      return 'offline';
+    }
+  }
+
   window.KD_DEFAULTS = DEFAULTS;
   window.useKDState = useKDState;
   window.KD = {
     daysUntil, formatEUR, formatUSD, computeProgress,
     progressByCategory, laneProgress, moneyTotals,
     linkedTasks, linkedLines,
+    refreshExchangeRates,
+    statusOptions: STATUS_OPTIONS,
+    urgencyOptions: URGENCY_OPTIONS,
+    statusColor: STATUS_COLOR,
+    urgencyColor: URGENCY_COLOR,
+    palette: PALETTE,
     STORAGE_KEY,
   };
 })();

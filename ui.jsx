@@ -1,19 +1,6 @@
 // Shared UI components: CategoryChip, UrgencyPill, EditableNumber, EditableText,
 // RingProgress, StackedBudgetBar, TaskDetailDrawer.
 
-const ui_palette = {
-  paper: '#f5f1ea',
-  card:  '#ffffff',
-  ink:   '#1d1a15',
-  dim:   '#7a7266',
-  line:  'rgba(24,20,15,0.08)',
-  accent: '#9b4722',
-  accentSoft: '#e8dfd3',
-  green: '#2f7d5b',
-  amber: '#b67417',
-  red:   '#9a2f3f',
-};
-
 function CategoryChip({ cat, categories, size='sm' }) {
   const c = categories[cat] || { color: '#666', bg: '#eee' };
   const padding = size==='sm' ? '2px 7px' : '3px 10px';
@@ -31,11 +18,9 @@ function CategoryChip({ cat, categories, size='sm' }) {
 }
 
 function UrgencyPill({ urgency, due }) {
-  const tone = {
-    asap:  { color: '#9a2f3f', weight: 600 },
-    soon:  { color: '#b67417', weight: 600 },
-    later: { color: '#7a7266', weight: 500 },
-  }[urgency] || { color: '#7a7266', weight: 500 };
+  const color = KD.urgencyColor[urgency] || '#7a7266';
+  const weight = urgency === 'later' ? 500 : 600;
+  const tone = { color, weight };
   return (
     <span style={{
       fontSize: 11, color: tone.color, fontWeight: tone.weight,
@@ -154,11 +139,7 @@ function RingProgress({ pct, size=64, stroke=6, color='#9b4722', bg='rgba(24,20,
 }
 
 function StackedBudgetBar({ lines, totalEUR }) {
-  const colors = {
-    sent:      '#2f7d5b',
-    pending:   '#d98a45',
-    recurring: '#6b7b8c',
-  };
+  const colors = KD.statusColor;
   return (
     <div>
       <div style={{
@@ -284,11 +265,7 @@ function TaskDetailDrawer({ task, lane, state, setState, onClose, onOpenLine }) 
   };
 
   const categoryNames = Object.keys(state.categories || KD_DEFAULTS.categories);
-  const urgencyOptions = [
-    { key: 'asap',  label: 'ASAP',  color: '#9a2f3f' },
-    { key: 'soon',  label: 'Soon',  color: '#b67417' },
-    { key: 'later', label: 'Later', color: '#7a7266' },
-  ];
+  const urgencyOptions = KD.urgencyOptions;
 
   return (
     <div style={{
@@ -513,7 +490,7 @@ function TaskDetailDrawer({ task, lane, state, setState, onClose, onOpenLine }) 
 function LinkedLinesBlock({ lines, allLines, onOpenLine, onUnlink, onLink }) {
   const [picking, setPicking] = React.useState(false);
   const available = allLines.filter(l => !lines.some(ll => ll.id === l.id));
-  const statusColor = { sent: '#2f7d5b', pending: '#d98a45', recurring: '#6b7b8c' };
+  const statusColor = KD.statusColor;
 
   return (
     <div>
@@ -613,11 +590,7 @@ function LineDetailDrawer({ lineId, state, setState, onClose, onOpenTask }) {
     updateLine({ taskIds: Array.from(new Set([...(line.taskIds || []), taskId])) });
   };
 
-  const statusOptions = [
-    { key: 'sent',      label: 'Sent',      color: '#2f7d5b' },
-    { key: 'pending',   label: 'Pending',   color: '#d98a45' },
-    { key: 'recurring', label: 'Recurring', color: '#6b7b8c' },
-  ];
+  const statusOptions = KD.statusOptions;
 
   return (
     <div style={{
@@ -795,7 +768,7 @@ function LineDetailDrawer({ lineId, state, setState, onClose, onOpenTask }) {
 }
 
 Object.assign(window, {
-  ui_palette, CategoryChip, UrgencyPill,
+  CategoryChip, UrgencyPill,
   EditableNumber, EditableText, RingProgress, StackedBudgetBar,
   TaskDetailDrawer, LineDetailDrawer, LinkedLinesBlock, PencilIcon,
 });
