@@ -208,53 +208,130 @@ function GermanDude({ size = 52, hopping = false, waving = false }) {
   );
 }
 
-// Picks a short, state-aware motivating line for the Bavarian dude.
-// Deterministic per-day so it doesn't flicker on re-render, but rotates daily.
-function pickDudeAdvice(state, progress, byCat) {
+// German phrases the dude teaches. Grouped by theme so we can bias
+// selection by what the user is actually working on.
+const GERMAN_PHRASES = {
+  greetings: [
+    { de: "Servus!",            en: "Hi! / Bye! (Bavarian)",        say: "ZER-voos",            tip: "Casual hello in the south. In Köln you'd say Hallo or Tach." },
+    { de: "Tach!",              en: "Hey! (Kölsch)",                say: "tahkh",               tip: "The proper Cologne greeting. Short for 'Guten Tag'." },
+    { de: "Wie geht's?",        en: "How's it going?",              say: "vee gates",           tip: "Reply: 'Gut, danke' — good, thanks." },
+    { de: "Tschüss!",           en: "Bye!",                         say: "chooss",              tip: "Universal casual goodbye." },
+    { de: "Bis später!",        en: "See you later!",               say: "biss SHPAY-tuh",      tip: "Friendly sign-off." },
+    { de: "Danke schön.",       en: "Thank you.",                   say: "DAHN-kuh shurn",     tip: "Reply: 'Bitte schön' — you're welcome." },
+    { de: "Entschuldigung.",    en: "Excuse me / Sorry.",           say: "ent-SHOOL-dee-goong", tip: "Works for both bumping into someone and getting attention." },
+  ],
+  bureaucracy: [
+    { de: "Ich möchte einen Termin.",           en: "I'd like an appointment.",       say: "ikh MURKH-tuh I-nun ter-MEEN", tip: "Magic words at the Bürgeramt. Nothing happens without a Termin." },
+    { de: "Ich möchte mich anmelden.",          en: "I'd like to register.",          say: "ikh MURKH-tuh mikh AHN-mel-dun", tip: "What you say at the Bürgeramt within 14 days of moving in." },
+    { de: "Wo ist das Bürgeramt?",              en: "Where is the citizens' office?", say: "voh ist dahss BUR-guh-rahmt", tip: "Your home base for registration, ID, everything official." },
+    { de: "Ich habe einen Termin um zehn Uhr.", en: "I have an appointment at 10.",   say: "ikh HAH-buh I-nun ter-MEEN oom tsayn oor", tip: "Always announce your Termin at the desk." },
+    { de: "Ich verstehe nur Bahnhof.",          en: "I understand only 'train station'.", say: "ikh fer-SHTAY-uh noor BAHN-hofe", tip: "Idiom for 'I have no clue what you're saying'. Officials will smile." },
+    { de: "Können Sie das wiederholen?",        en: "Can you repeat that?",           say: "KUR-nun zee dahss vee-duh-HOH-lun", tip: "Useful when the Beamter speaks at warp speed." },
+  ],
+  apartment: [
+    { de: "Ist die Wohnung noch frei?",   en: "Is the apartment still available?", say: "ist dee VOH-noong nokh fry", tip: "First line of every apartment-hunt email." },
+    { de: "Wann kann ich besichtigen?",    en: "When can I view it?",               say: "vahn kahn ikh buh-ZIKH-tee-gun", tip: "Besichtigung = the viewing appointment." },
+    { de: "Wie hoch ist die Warmmiete?",   en: "What's the warm rent?",             say: "vee hohkh ist dee VARM-mee-tuh", tip: "Warmmiete includes utilities. Kaltmiete doesn't. Always ask warm." },
+    { de: "Kaution?",                      en: "Deposit?",                          say: "kow-tsee-OWN",        tip: "Usually 2–3 months cold rent. Non-negotiable." },
+    { de: "Schufa-Auskunft",               en: "Credit report",                     say: "SHOO-fah OWS-koonft", tip: "Landlords will ask. Get yours at meineschufa.de." },
+  ],
+  cafe: [
+    { de: "Ein Kölsch, bitte.",       en: "One Kölsch, please.",        say: "ine kurlsh BIT-tuh",   tip: "The local beer. Comes in tiny 0.2L glasses — keeps it fresh." },
+    { de: "Noch eins, bitte!",        en: "Another one, please!",       say: "nokh ines BIT-tuh",    tip: "The waiter (Köbes) will keep refilling until you put the coaster on top." },
+    { de: "Die Rechnung, bitte.",     en: "The bill, please.",          say: "dee REKH-noong BIT-tuh", tip: "Tip ~10% — say the rounded total when you pay, don't leave coins on the table." },
+    { de: "Zum Mitnehmen.",           en: "To take away.",              say: "tsoom MIT-nay-mun",    tip: "Versus 'zum hier essen' — to eat here." },
+    { de: "Prost!",                   en: "Cheers!",                    say: "prohst",               tip: "Look people in the eye when you clink. Otherwise: 7 years bad luck." },
+    { de: "Guten Appetit!",           en: "Enjoy your meal!",           say: "GOO-tun ah-puh-TEET",  tip: "Said before eating. Reply: 'Danke, gleichfalls' — same to you." },
+  ],
+  transit: [
+    { de: "Wo ist die nächste Haltestelle?", en: "Where's the nearest stop?",   say: "voh ist dee NAYKH-stuh HAHL-tuh-shtel-uh", tip: "For trams and buses." },
+    { de: "Eine Fahrkarte nach Köln, bitte.", en: "A ticket to Köln, please.",  say: "I-nuh FAR-kar-tuh nakh kurln BIT-tuh", tip: "At the Automat or the counter." },
+    { de: "Wann kommt die nächste Bahn?",    en: "When's the next train?",      say: "vahn komt dee NAYKH-stuh bahn", tip: "Bahn = train/tram. Check the DB Navigator app." },
+    { de: "Ist dieser Platz frei?",          en: "Is this seat free?",          say: "ist DEE-zuh plahts fry",       tip: "Polite way to claim a seat on a packed train." },
+  ],
+  smalltalk: [
+    { de: "Ich komme aus Indonesien.",  en: "I'm from Indonesia.",        say: "ikh KOM-uh ows in-doh-NAY-zee-un", tip: "Germans love asking where you're from." },
+    { de: "Ich lerne noch Deutsch.",    en: "I'm still learning German.", say: "ikh LER-nuh nokh doytch", tip: "Disarms locals — they'll switch to slow mode (or English)." },
+    { de: "Sprechen Sie Englisch?",     en: "Do you speak English?",      say: "SHPREKH-un zee ENG-lish", tip: "In Köln, almost always yes. Try the German first anyway." },
+    { de: "Alles klar.",                en: "All good. / Got it.",        say: "AHL-us klar",       tip: "Conversational glue. Use it everywhere." },
+    { de: "Genau.",                     en: "Exactly.",                   say: "guh-NOW",           tip: "The most German word. Sprinkle liberally to sound fluent." },
+  ],
+  schimpfwoerter: [
+    { de: "Scheiße!",                       en: "Shit!",                                 say: "SHY-suh",                       tip: "The all-purpose exclamation. Heard hourly on every German street." },
+    { de: "Mist!",                          en: "Damn! / Crap!",                         say: "mist",                          tip: "PG version of Scheiße. Safe in front of your boss." },
+    { de: "Verdammt!",                      en: "Damn it!",                              say: "fer-DAHMT",                     tip: "When you stub your toe on IKEA furniture." },
+    { de: "Quatsch!",                       en: "Nonsense! / No way!",                   say: "kvatch",                        tip: "Friendly disbelief. 'Quatsch mit Soße' = nonsense with sauce." },
+    { de: "Ach du Scheibenkleister!",       en: "Oh, window paste!",                     say: "akh doo SHY-bun-kly-stuh",      tip: "Hilariously G-rated 'oh shit'. Literally 'window glue'. Use in front of grandmas." },
+    { de: "Verpiss dich!",                  en: "Piss off!",                             say: "fer-PISS dikh",                 tip: "Strong. Save for actual jerks, not friends." },
+    { de: "Du gehst mir auf den Keks.",     en: "You're getting on my biscuit.",         say: "doo gayst meer owf dayn keks",  tip: "= 'on my nerves'. Adorable insult." },
+    { de: "Halt die Klappe!",               en: "Shut your trap!",                       say: "hahlt dee KLAH-puh",            tip: "Rude but not nuclear. Klappe = the flap/lid." },
+    { de: "Leck mich!",                     en: "Bite me!",                              say: "lek mikh",                      tip: "Short for the Goethe quote 'Leck mich am Arsch'. A literary insult." },
+    { de: "Arschkalt",                      en: "Ass-cold",                              say: "ARSH-kahlt",                    tip: "Useful for Köln in February. 'Es ist arschkalt draußen!'" },
+    { de: "Das ist mir wurst.",             en: "That's sausage to me.",                 say: "dahss ist meer voorst",         tip: "= 'I don't care'. Peak German philosophy." },
+    { de: "Jetzt haben wir den Salat.",     en: "Now we have the salad.",                say: "yetst HAH-bun veer dayn zah-LAHT", tip: "= 'Now we're in a mess.' Said when the plan goes sideways." },
+    { de: "Ich glaub mein Schwein pfeift.", en: "I think my pig is whistling.",          say: "ikh glowb mine shvine pfyft",   tip: "= 'You've gotta be kidding me.' Surreal disbelief." },
+    { de: "Tomaten auf den Augen haben.",   en: "To have tomatoes on your eyes.",        say: "toh-MAH-tun owf dayn OW-gun HAH-bun", tip: "= 'To not see something obvious.' Useful when someone misses the joke." },
+  ],
+};
+
+// Map task categories → phrase themes, so the dude teaches what's relevant.
+const CATEGORY_TO_THEME = {
+  Banking: 'bureaucracy', Visa: 'bureaucracy', Admin: 'bureaucracy',
+  Housing: 'apartment', Apartment: 'apartment',
+  Travel: 'transit', Transit: 'transit',
+  Food: 'cafe', Café: 'cafe', Cafe: 'cafe',
+};
+
+// Picks what the dude should say. Mostly a German phrase, occasionally
+// a milestone reaction. Cycle index lets clicks rotate through phrases.
+function pickDudeContent(state, progress, byCat, cycle) {
   const allTasks = [...state.lanes.VJ, ...state.lanes.Jul];
   const asap = allTasks.filter(t => t.urgency === 'asap' && !state.checked[t.id]);
-  const days = KD.daysUntil(state.meta.departure);
-  const seed = new Date().toISOString().slice(0, 10);
-  const hash = [...seed].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7);
-  const pick = (arr) => arr[hash % arr.length];
 
-  if (progress.total > 0 && progress.pct >= 100) {
-    return pick([
-      "Alles fertig! Kölsch is on me.",
-      "Packed and ready. Servus, Köln.",
-      "Done. I'll see you at the Dom.",
-    ]);
+  // Milestones still trump phrases — but only on cycle 0 (initial render)
+  // so clicking always advances to a new phrase.
+  if (cycle === 0) {
+    if (progress.total > 0 && progress.pct >= 100) {
+      return { kind: 'milestone', text: "Alles fertig! Kölsch is on me. 🍺" };
+    }
+    if (asap.length >= 8) {
+      return { kind: 'milestone', text: `${asap.length} ASAPs stacking up. Schnell, schnell!` };
+    }
   }
-  if (asap.length >= 5) {
-    return pick([
-      `${asap.length} ASAP tasks staring you down. Knock out two today.`,
-      `Erstmal die ASAPs — ${asap.length} sitting in the queue.`,
-      `${asap.length} ASAPs. One at a time, mein Freund.`,
-    ]);
+
+  // Bias theme by which categories have the most open work.
+  const openByCat = {};
+  allTasks.forEach(t => {
+    if (!state.checked[t.id]) openByCat[t.cat] = (openByCat[t.cat] || 0) + 1;
+  });
+  const topCats = Object.entries(openByCat).sort((a, b) => b[1] - a[1]).map(([c]) => c);
+  const themes = ['greetings', 'cafe', 'smalltalk', 'schimpfwoerter']; // always-eligible
+  for (const c of topCats) {
+    const theme = CATEGORY_TO_THEME[c];
+    if (theme && !themes.includes(theme)) themes.unshift(theme);
   }
-  const justDone = Object.entries(byCat).find(([, d]) => d.total > 0 && d.pct === 100);
-  if (justDone && progress.pct < 100) {
-    return pick([
-      `${justDone[0]} fully done — Prost!`,
-      `${justDone[0]}: abgehakt. Weiter geht's.`,
-    ]);
-  }
-  if (days > 90 && progress.pct < 25) {
-    return pick([
-      "Plenty of time, ja — but don't let the visa office catch you lazy.",
-      "Slow start is fine. Just don't make it a habit.",
-    ]);
-  }
-  if (days < 60 && progress.pct < 60) {
-    return pick([
-      `Only ${days} days. Schnell, schnell!`,
-      `${days} days out and still on the back foot. Let's move.`,
-    ]);
-  }
-  if (progress.pct < 25) return pick(["Kick-off! One task beats zero.", "The hardest one is the first."]);
-  if (progress.pct < 50) return pick(["Momentum building. Keep it up.", "Halfway to halfway. Nicht schlecht."]);
-  if (progress.pct < 75) return pick(["Over the hump. I can smell the Kölsch.", "Home stretch incoming."]);
-  return pick(["Almost packed. The Dom awaits.", "A few more boxes between you and me."]);
+  // Every 5th cycle, force schimpfwörter for the lulz.
+  const theme = (cycle % 5 === 4)
+    ? 'schimpfwoerter'
+    : themes[cycle % themes.length];
+
+  const list = GERMAN_PHRASES[theme] || GERMAN_PHRASES.greetings;
+  const phrase = list[Math.floor(cycle / themes.length) % list.length];
+  return { kind: 'phrase', theme, ...phrase };
+}
+
+function speakGerman(text) {
+  if (typeof window === 'undefined' || !window.speechSynthesis) return;
+  try {
+    window.speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = 'de-DE';
+    u.rate = 0.92;
+    const voices = window.speechSynthesis.getVoices();
+    const de = voices.find(v => v.lang && v.lang.toLowerCase().startsWith('de'));
+    if (de) u.voice = de;
+    window.speechSynthesis.speak(u);
+  } catch (e) { /* ignore */ }
 }
 
 function OverallProgress({ state }) {
@@ -263,25 +340,36 @@ function OverallProgress({ state }) {
   const pct = progress.pct;
   const pctRounded = Math.round(pct);
   const [hopping, setHopping] = React.useState(false);
+  const [cycle, setCycle] = React.useState(0);
+  const [showTip, setShowTip] = React.useState(false);
   const hopTimer = React.useRef(null);
 
-  React.useEffect(() => {
-    const onClick = () => {
-      setHopping(true);
-      clearTimeout(hopTimer.current);
-      hopTimer.current = setTimeout(() => setHopping(false), 560);
-    };
-    document.addEventListener('click', onClick);
-    return () => {
-      document.removeEventListener('click', onClick);
-      clearTimeout(hopTimer.current);
-    };
-  }, []);
+  const handleDudeClick = (e) => {
+    e.stopPropagation();
+    setHopping(true);
+    setCycle(c => c + 1);
+    setShowTip(false);
+    clearTimeout(hopTimer.current);
+    hopTimer.current = setTimeout(() => setHopping(false), 560);
+  };
+
+  React.useEffect(() => () => clearTimeout(hopTimer.current), []);
 
   const dudePos = Math.max(0, Math.min(100, pct));
-  // Clamp bubble anchor so it doesn't overflow the card edges.
-  const bubblePos = Math.max(14, Math.min(86, dudePos));
-  const advice = pickDudeAdvice(state, progress, byCat);
+  // Bubble is wider now — clamp the anchor further from the edges.
+  const bubblePos = Math.max(28, Math.min(72, dudePos));
+  const content = pickDudeContent(state, progress, byCat, cycle);
+  const isPhrase = content.kind === 'phrase';
+
+  const themeLabel = isPhrase ? ({
+    greetings: 'Greetings',
+    bureaucracy: 'At the Bürgeramt',
+    apartment: 'Apartment hunt',
+    cafe: 'Café & Kneipe',
+    transit: 'Getting around',
+    smalltalk: 'Small talk',
+    schimpfwoerter: 'Schimpfwörter 🤬',
+  })[content.theme] : null;
 
   return (
     <div style={{ paddingBottom: 18, borderBottom: '1px dashed rgba(24,20,15,0.1)', marginBottom: 18 }}>
@@ -305,6 +393,20 @@ function OverallProgress({ state }) {
           0%   { opacity: 0; transform: translate(-50%, 4px) scale(0.94); }
           100% { opacity: 1; transform: translate(-50%, 0) scale(1); }
         }
+        .kd-bubble-btn {
+          background: transparent;
+          border: 1px solid ${P.lineMid};
+          color: ${P.dimStrong};
+          font: inherit;
+          font-size: 10px;
+          letter-spacing: 1.5px;
+          text-transform: uppercase;
+          padding: 3px 7px;
+          border-radius: 4px;
+          cursor: pointer;
+          transition: background 0.15s, color 0.15s;
+        }
+        .kd-bubble-btn:hover { background: ${P.accent}; color: #fff; border-color: ${P.accent}; }
       `}</style>
 
       <div style={{
@@ -322,16 +424,15 @@ function OverallProgress({ state }) {
         </div>
       </div>
 
-      <div style={{ position: 'relative', height: 112, paddingTop: 48 }}>
-        {/* Speech bubble, anchored near the dude's head */}
-        <div key={advice} style={{
+      <div style={{ position: 'relative', minHeight: 168, paddingTop: showTip ? 132 : 108 }}>
+        {/* Speech bubble — wider, multi-line, interactive */}
+        <div key={cycle} style={{
           position: 'absolute',
           left: `${bubblePos}%`,
           top: 0,
           transform: 'translateX(-50%)',
-          maxWidth: 260,
+          width: 'min(360px, 92%)',
           animation: 'kd-bubble-in 0.35s ease',
-          pointerEvents: 'none',
           zIndex: 3,
         }}>
           <div className="va-sans" style={{
@@ -340,20 +441,71 @@ function OverallProgress({ state }) {
             color: P.ink,
             border: `1px solid ${P.lineMid}`,
             borderRadius: 14,
-            padding: '8px 12px',
-            fontSize: 12.5,
-            lineHeight: 1.4,
-            fontStyle: 'italic',
+            padding: '10px 14px 12px',
             boxShadow: '0 4px 14px rgba(24,20,15,0.08)',
-            whiteSpace: 'nowrap',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            maxWidth: 260,
           }}>
-            <span style={{ color: P.accent, marginRight: 6 }}>“</span>
-            {advice}
-            <span style={{ color: P.accent, marginLeft: 4 }}>”</span>
-            {/* Pointer — centered on the bubble (which is clamped), angled toward the dude */}
+            {isPhrase && themeLabel && (
+              <div className="va-mono" style={{
+                fontSize: 9, letterSpacing: 1.8, textTransform: 'uppercase',
+                color: P.accent, fontWeight: 700, marginBottom: 4,
+              }}>{themeLabel}</div>
+            )}
+            {isPhrase ? (
+              <>
+                <div style={{
+                  fontSize: 16, fontWeight: 700, color: P.ink,
+                  lineHeight: 1.25, marginBottom: 3,
+                }}>
+                  <span style={{ color: P.accent, marginRight: 4 }}>“</span>
+                  {content.de}
+                  <span style={{ color: P.accent, marginLeft: 2 }}>”</span>
+                </div>
+                <div style={{ fontSize: 12.5, color: P.dimStrong, fontStyle: 'italic', lineHeight: 1.35 }}>
+                  {content.en}
+                </div>
+                <div style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  gap: 8, marginTop: 8, flexWrap: 'wrap',
+                }}>
+                  <div className="va-mono" style={{ fontSize: 10, color: P.dim, letterSpacing: 0.5 }}>
+                    /{content.say}/
+                  </div>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <button
+                      className="kd-bubble-btn"
+                      onClick={(e) => { e.stopPropagation(); speakGerman(content.de); }}
+                      title="Hear it"
+                    >🔊 Say</button>
+                    <button
+                      className="kd-bubble-btn"
+                      onClick={(e) => { e.stopPropagation(); setShowTip(t => !t); }}
+                      title="Show context"
+                    >{showTip ? '× Hide' : '? Tip'}</button>
+                    <button
+                      className="kd-bubble-btn"
+                      onClick={handleDudeClick}
+                      title="Next phrase"
+                    >Next →</button>
+                  </div>
+                </div>
+                {showTip && (
+                  <div style={{
+                    marginTop: 8, paddingTop: 8,
+                    borderTop: `1px dashed ${P.lineSoft}`,
+                    fontSize: 12, color: P.dimStrong, lineHeight: 1.4,
+                  }}>
+                    💡 {content.tip}
+                  </div>
+                )}
+              </>
+            ) : (
+              <div style={{ fontSize: 13.5, color: P.ink, fontStyle: 'italic', lineHeight: 1.4 }}>
+                <span style={{ color: P.accent, marginRight: 4 }}>“</span>
+                {content.text}
+                <span style={{ color: P.accent, marginLeft: 2 }}>”</span>
+              </div>
+            )}
+            {/* Pointer */}
             <div style={{
               position: 'absolute',
               left: `${Math.max(8, Math.min(92, 50 + (dudePos - bubblePos)))}%`,
@@ -367,16 +519,19 @@ function OverallProgress({ state }) {
           </div>
         </div>
 
-        {/* The dude walks the bar */}
-        <div style={{
-          position: 'absolute',
-          left: `${dudePos}%`,
-          bottom: 4,
-          transform: 'translateX(-50%)',
-          transition: 'left 0.7s cubic-bezier(.4,.6,.3,1)',
-          pointerEvents: 'none',
-          zIndex: 2,
-        }}>
+        {/* The dude walks the bar — now click target */}
+        <div
+          onClick={handleDudeClick}
+          title="Click for the next phrase"
+          style={{
+            position: 'absolute',
+            left: `${dudePos}%`,
+            bottom: 4,
+            transform: 'translateX(-50%)',
+            transition: 'left 0.7s cubic-bezier(.4,.6,.3,1)',
+            cursor: 'pointer',
+            zIndex: 2,
+          }}>
           <GermanDude hopping={hopping}/>
         </div>
         <div style={{
