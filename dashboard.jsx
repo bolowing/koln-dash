@@ -1,6 +1,8 @@
 // Variation A — Cozy single-scroll dashboard.
 // Warm paper background, rounded cards, editorial typography.
 
+const P = KD.palette;
+
 function VariationA({ onReset }) {
   const [state, setState] = useKDState();
   const [openTask, setOpenTask] = React.useState(null);
@@ -37,8 +39,8 @@ function VariationA({ onReset }) {
   return (
     <div style={{
       fontFamily: '"Instrument Serif", Georgia, serif',
-      background: '#f5f1ea',
-      color: '#1d1a15',
+      background: P.paper,
+      color: P.ink,
       minHeight: '100%',
       padding: '36px 40px 60px',
       position: 'relative',
@@ -52,22 +54,22 @@ function VariationA({ onReset }) {
       {/* Masthead */}
       <header style={{
         display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end',
-        paddingBottom: 22, borderBottom: '1px solid rgba(24,20,15,0.12)',
+        paddingBottom: 22, borderBottom: `1px solid ${P.lineMid}`,
         marginBottom: 28,
       }}>
         <div>
           <div className="va-mono" style={{
             fontSize: 10, letterSpacing: 2, textTransform: 'uppercase',
-            color: '#9b4722', marginBottom: 4,
+            color: P.accent, marginBottom: 4,
           }}>Study abroad · {new Date().toLocaleDateString('en-US', { weekday: 'long' })}</div>
           <h1 style={{
             fontSize: 56, fontWeight: 400, lineHeight: 1,
             margin: 0, letterSpacing: -1,
           }}>
-            Study abroad in <em style={{ color: '#9b4722', fontStyle: 'italic' }}>Köln</em>
+            Study abroad in <em style={{ color: P.accent, fontStyle: 'italic' }}>Köln</em>
           </h1>
           <div className="va-sans" style={{
-            fontSize: 13, color: '#57514a', marginTop: 8,
+            fontSize: 13, color: P.dimStrong, marginTop: 8,
           }}>
             Vernon · {state.meta.program} · '26–'27 · updated {new Date().toLocaleDateString('en-US', { month:'short', day:'numeric' })}
           </div>
@@ -77,11 +79,11 @@ function VariationA({ onReset }) {
             }}>
               <span style={{
                 fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.8,
-                color: '#7a7266', fontWeight: 600,
+                color: P.dim, fontWeight: 600,
               }}>Degree ·</span>
               {state.meta.degrees.map((d, i) => (
                 <React.Fragment key={i}>
-                  {i > 0 && <span style={{ fontSize: 11, color: '#a8a095', fontStyle: 'italic' }}>or</span>}
+                  {i > 0 && <span style={{ fontSize: 11, color: P.dimSoft, fontStyle: 'italic' }}>or</span>}
                   <span style={{
                     fontSize: 11, color: '#8a5a2b', background: '#f4ead9',
                     padding: '3px 9px', borderRadius: 4, fontWeight: 600,
@@ -93,10 +95,10 @@ function VariationA({ onReset }) {
         </div>
 
         <div className="va-sans" style={{
-          textAlign: 'right', fontSize: 12, color: '#57514a', lineHeight: 1.7,
+          textAlign: 'right', fontSize: 12, color: P.dimStrong, lineHeight: 1.7,
         }}>
-          <div style={{ color: '#7a7266' }}>Köln weather</div>
-          <div><strong style={{ color: '#1d1a15' }}>15°</strong> · Cloudy</div>
+          <div style={{ color: P.dim }}>Köln weather</div>
+          <div><strong style={{ color: P.ink }}>15°</strong> · Cloudy</div>
           <div style={{ marginTop: 6 }}>EUR → USD · {state.money.fxEurUsd.toFixed(2)}</div>
         </div>
       </header>
@@ -107,7 +109,7 @@ function VariationA({ onReset }) {
         gap: 18, marginBottom: 28,
       }}>
         <div style={{
-          background: '#1d1a15', color: '#f5f1ea',
+          background: P.ink, color: P.paper,
           borderRadius: 18, padding: '22px 26px',
           position: 'relative', overflow: 'hidden',
         }}>
@@ -132,18 +134,18 @@ function VariationA({ onReset }) {
         </div>
 
         <div style={{
-          background: '#fff', borderRadius: 18, padding: '22px 24px',
+          background: P.card, borderRadius: 18, padding: '22px 24px',
           display: 'flex', alignItems: 'center', gap: 18,
         }}>
           <RingProgress pct={progress.pct} size={92} stroke={8} color="#9b4722"/>
           <div>
             <div className="va-mono" style={{
-              fontSize: 10, letterSpacing: 2, textTransform: 'uppercase', color: '#9b4722',
+              fontSize: 10, letterSpacing: 2, textTransform: 'uppercase', color: P.accent,
             }}>Prep complete</div>
             <div className="va-sans" style={{ fontSize: 22, fontWeight: 500, marginTop: 4, lineHeight: 1.2 }}>
               {progress.done} of {progress.total} tasks
             </div>
-            <div className="va-sans" style={{ fontSize: 12, color: '#7a7266', marginTop: 2 }}>
+            <div className="va-sans" style={{ fontSize: 12, color: P.dim, marginTop: 2 }}>
               across {Object.keys(cats).length} categories
             </div>
           </div>
@@ -158,13 +160,13 @@ function VariationA({ onReset }) {
           display: 'flex', alignItems: 'baseline', gap: 14, marginBottom: 14,
         }}>
           <h2 style={{ fontSize: 30, fontWeight: 400, margin: 0, letterSpacing: -0.5 }}>Money</h2>
-          <span className="va-sans" style={{ fontSize: 12, color: '#7a7266' }}>
+          <span className="va-sans" style={{ fontSize: 12, color: P.dim }}>
             Total budget + what's moved so far
           </span>
         </div>
 
         <div style={{
-          background: '#fff', borderRadius: 18, padding: '24px 26px',
+          background: P.card, borderRadius: 18, padding: '24px 26px',
         }}>
           <div style={{
             display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 36,
@@ -192,29 +194,29 @@ function VariationA({ onReset }) {
             {state.money.lines.map((line, i) => (
               <div key={line.id} className="va-sans"
                 onClick={() => setOpenLineId(line.id)}
-                onMouseEnter={e => e.currentTarget.style.background = '#faf6ef'}
+                onMouseEnter={e => e.currentTarget.style.background = P.hover}
                 onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                 style={{
                   display: 'grid', gridTemplateColumns: '1fr auto auto',
                   gap: 16, alignItems: 'center',
                   padding: '10px 8px', marginLeft: -8, marginRight: -8,
                   borderRadius: 8, cursor: 'pointer',
-                  borderTop: i === 0 ? 'none' : '1px solid rgba(24,20,15,0.06)',
+                  borderTop: i === 0 ? 'none' : `1px solid ${P.lineSoft}`,
                   fontSize: 13,
                   transition: 'background .12s',
                 }}
               >
                 <div>
-                  <div style={{ color: '#1d1a15', fontWeight: 500, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <div style={{ color: P.ink, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 6 }}>
                     {line.label}
                     {(line.taskIds || []).length > 0 && (
                       <span title={(line.taskIds || []).length + ' linked task(s)'} style={{
-                        fontSize: 10, color: '#9b4722', background: '#f4ead9',
+                        fontSize: 10, color: P.accent, background: '#f4ead9',
                         padding: '1px 6px', borderRadius: 4, fontWeight: 600,
                       }}>↳ {(line.taskIds || []).length}</span>
                     )}
                   </div>
-                  <div style={{ color: '#7a7266', fontSize: 11, marginTop: 1 }}>{line.note}</div>
+                  <div style={{ color: P.dim, fontSize: 11, marginTop: 1 }}>{line.note}</div>
                 </div>
                 <StatusDot status={line.status}/>
                 <div style={{ fontFamily: 'inherit', fontWeight: 500, minWidth: 90, textAlign: 'right' }}>
@@ -225,8 +227,8 @@ function VariationA({ onReset }) {
           </div>
 
           <button onClick={() => setShowAddLine(true)} className="va-sans" style={{
-            marginTop: 14, border: '1px dashed rgba(24,20,15,0.18)',
-            background: 'transparent', color: '#7a7266',
+            marginTop: 14, border: `1px dashed ${P.lineDashed}`,
+            background: 'transparent', color: P.dim,
             padding: '10px 12px', borderRadius: 10, cursor: 'pointer',
             fontSize: 13, width: '100%', fontFamily: 'inherit', fontWeight: 500,
           }}>+ Add line item</button>
@@ -241,14 +243,14 @@ function VariationA({ onReset }) {
         }}>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 14 }}>
             <h2 style={{ fontSize: 30, fontWeight: 400, margin: 0, letterSpacing: -0.5 }}>Tasks</h2>
-            <span className="va-sans" style={{ fontSize: 12, color: '#7a7266' }}>Tap a task to open · click the box to check off</span>
+            <span className="va-sans" style={{ fontSize: 12, color: P.dim }}>Tap a task to open · click the box to check off</span>
           </div>
           <div className="va-sans" style={{ display: 'flex', gap: 4 }}>
             {[['all','All'],['asap','ASAP'],['mine','VJ'],['jul','Jul']].map(([k,label]) => (
               <button key={k} onClick={() => setTab(k)} style={{
                 border: 'none',
-                background: tab === k ? '#1d1a15' : 'transparent',
-                color: tab === k ? '#fff' : '#57514a',
+                background: tab === k ? P.ink : 'transparent',
+                color: tab === k ? P.card : P.dimStrong,
                 padding: '6px 14px', borderRadius: 999, fontSize: 12,
                 cursor: 'pointer', fontWeight: 500, fontFamily: 'inherit',
               }}>{label}</button>
@@ -284,14 +286,14 @@ function VariationA({ onReset }) {
       <section style={{ marginBottom: 12 }}>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 14, marginBottom: 14 }}>
           <h2 style={{ fontSize: 30, fontWeight: 400, margin: 0, letterSpacing: -0.5 }}>Readiness</h2>
-          <span className="va-sans" style={{ fontSize: 12, color: '#7a7266' }}>Readiness by category + timeline</span>
+          <span className="va-sans" style={{ fontSize: 12, color: P.dim }}>Readiness by category + timeline</span>
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.6fr', gap: 18 }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {Object.entries(byCat).map(([cat, d]) => (
               <div key={cat} style={{
-                background: '#fff', borderRadius: 14, padding: '14px 16px',
+                background: P.card, borderRadius: 14, padding: '14px 16px',
                 display: 'grid', gridTemplateColumns: '1fr auto', gap: 10,
               }}>
                 <div>
@@ -305,15 +307,15 @@ function VariationA({ onReset }) {
                     }}/>
                     {cat}
                   </div>
-                  <div className="va-sans" style={{ fontSize: 11, color: '#7a7266', marginTop: 6 }}>
+                  <div className="va-sans" style={{ fontSize: 11, color: P.dim, marginTop: 6 }}>
                     Next: {d.next}
                   </div>
                 </div>
                 <div style={{ textAlign: 'right' }}>
-                  <div className="va-sans" style={{ fontSize: 22, fontWeight: 500, color: '#1d1a15', lineHeight: 1 }}>
+                  <div className="va-sans" style={{ fontSize: 22, fontWeight: 500, color: P.ink, lineHeight: 1 }}>
                     {d.pct}%
                   </div>
-                  <div className="va-sans" style={{ fontSize: 10, color: '#7a7266' }}>
+                  <div className="va-sans" style={{ fontSize: 10, color: P.dim }}>
                     {d.done}/{d.total}
                   </div>
                 </div>
@@ -322,12 +324,12 @@ function VariationA({ onReset }) {
           </div>
 
           <div style={{
-            background: '#fff', borderRadius: 18, padding: '22px 24px',
+            background: P.card, borderRadius: 18, padding: '22px 24px',
             position: 'relative',
           }}>
             <div className="va-mono" style={{
               fontSize: 10, letterSpacing: 2, textTransform: 'uppercase',
-              color: '#9b4722', marginBottom: 14,
+              color: P.accent, marginBottom: 14,
             }}>Timeline · what's next</div>
             <div style={{ position: 'relative', paddingLeft: 4 }}>
               <div style={{
@@ -343,11 +345,11 @@ function VariationA({ onReset }) {
                   <div style={{
                     position: 'absolute', left: 8, top: 6, width: 14, height: 14,
                     borderRadius: '50%',
-                    background: i === state.upcoming.length - 1 ? '#1d1a15' : '#fff',
-                    border: '2px solid ' + (i === state.upcoming.length - 1 ? '#1d1a15' : '#9b4722'),
+                    background: i === state.upcoming.length - 1 ? P.ink : P.card,
+                    border: '2px solid ' + (i === state.upcoming.length - 1 ? P.ink : P.accent),
                   }}/>
-                  <div style={{ fontSize: 11, color: '#9b4722', fontWeight: 600, letterSpacing: 0.5 }}>{u.when}</div>
-                  <div style={{ fontSize: 13, color: '#1d1a15', fontWeight: 500 }}>{u.what}</div>
+                  <div style={{ fontSize: 11, color: P.accent, fontWeight: 600, letterSpacing: 0.5 }}>{u.when}</div>
+                  <div style={{ fontSize: 13, color: P.ink, fontWeight: 500 }}>{u.what}</div>
                   <CategoryChip cat={u.cat} categories={cats}/>
                 </div>
               ))}
@@ -358,7 +360,7 @@ function VariationA({ onReset }) {
 
       <footer className="va-sans" style={{
         marginTop: 30, paddingTop: 16,
-        borderTop: '1px solid rgba(24,20,15,0.08)',
+        borderTop: `1px solid ${P.line}`,
         fontSize: 11, color: '#9b8f7f',
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
       }}>
@@ -368,7 +370,7 @@ function VariationA({ onReset }) {
           {onReset && (
             <button onClick={onReset} style={{
               border: '1px solid rgba(154,47,63,0.3)', background: 'transparent',
-              color: '#9a2f3f', padding: '4px 10px', borderRadius: 6,
+              color: P.danger, padding: '4px 10px', borderRadius: 6,
               fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
             }}>Reset state</button>
           )}
@@ -417,12 +419,12 @@ function MoneyStat({ label, value, sub }) {
   return (
     <div>
       <div className="va-mono" style={{
-        fontSize: 10, letterSpacing: 2, textTransform: 'uppercase', color: '#7a7266',
+        fontSize: 10, letterSpacing: 2, textTransform: 'uppercase', color: P.dim,
       }}>{label}</div>
       <div style={{ fontSize: 36, fontWeight: 400, letterSpacing: -0.5, lineHeight: 1.1, marginTop: 6 }}>
         {value}
       </div>
-      <div className="va-sans" style={{ fontSize: 11, color: '#7a7266', marginTop: 4 }}>{sub}</div>
+      <div className="va-sans" style={{ fontSize: 11, color: P.dim, marginTop: 4 }}>{sub}</div>
     </div>
   );
 }
@@ -433,7 +435,7 @@ function StatusDot({ status }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
       <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: 999, background: s.color }}/>
-      <span style={{ fontSize: 11, color: '#57514a', fontWeight: 500, textTransform: 'uppercase', letterSpacing: 0.6 }}>
+      <span style={{ fontSize: 11, color: P.dimStrong, fontWeight: 500, textTransform: 'uppercase', letterSpacing: 0.6 }}>
         {s.label}
       </span>
     </div>
@@ -448,19 +450,19 @@ function Lane({ title, lane, visible, filterASAP, state, onOpen, onAdd, onToggle
 
   return (
     <div style={{
-      background: '#fff', borderRadius: 18, padding: '20px 20px 14px',
+      background: P.card, borderRadius: 18, padding: '20px 20px 14px',
     }}>
       <div style={{
         display: 'flex', justifyContent: 'space-between', alignItems: 'baseline',
-        paddingBottom: 12, borderBottom: '1px solid rgba(24,20,15,0.06)',
+        paddingBottom: 12, borderBottom: `1px solid ${P.lineSoft}`,
         marginBottom: 10,
       }}>
         <div style={{
           fontSize: 20, fontWeight: 400, letterSpacing: -0.3,
           fontFamily: '"Instrument Serif", Georgia, serif',
         }}>{title}</div>
-        <div className="va-sans" style={{ fontSize: 12, color: '#7a7266' }}>
-          <strong style={{ color: '#1d1a15', fontWeight: 600 }}>{lp.done}</strong> / {lp.total}
+        <div className="va-sans" style={{ fontSize: 12, color: P.dim }}>
+          <strong style={{ color: P.ink, fontWeight: 600 }}>{lp.done}</strong> / {lp.total}
         </div>
       </div>
 
@@ -477,8 +479,8 @@ function Lane({ title, lane, visible, filterASAP, state, onOpen, onAdd, onToggle
       </div>
 
       <button onClick={onAdd} className="va-sans" style={{
-        marginTop: 10, border: '1px dashed rgba(24,20,15,0.18)',
-        background: 'transparent', color: '#7a7266',
+        marginTop: 10, border: `1px dashed ${P.lineDashed}`,
+        background: 'transparent', color: P.dim,
         padding: '8px 12px', borderRadius: 10, cursor: 'pointer',
         fontSize: 12, width: '100%', fontFamily: 'inherit', fontWeight: 500,
       }}>+ Add task to {lane}'s lane</button>
@@ -495,14 +497,14 @@ function TaskRow({ t, checked, hasNotes, commentCount, linkedLineCount = 0, onOp
         padding: '9px 8px', borderRadius: 8, cursor: 'pointer',
         transition: 'background .12s',
       }}
-      onMouseEnter={e => e.currentTarget.style.background = '#faf6ef'}
+      onMouseEnter={e => e.currentTarget.style.background = P.hover}
       onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
       onClick={() => onOpen(t)}
     >
       <div onClick={e => { e.stopPropagation(); onToggle(t.id); }} style={{
         width: 18, height: 18, borderRadius: 5, marginTop: 2,
-        border: '1.5px solid ' + (checked ? '#2f7d5b' : 'rgba(24,20,15,0.35)'),
-        background: checked ? '#2f7d5b' : 'transparent',
+        border: '1.5px solid ' + (checked ? P.success : P.overlayStrong),
+        background: checked ? P.success : 'transparent',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         transition: 'all .15s',
       }}>
@@ -512,7 +514,7 @@ function TaskRow({ t, checked, hasNotes, commentCount, linkedLineCount = 0, onOp
       </div>
       <div>
         <div style={{
-          fontSize: 13.5, color: '#1d1a15', lineHeight: 1.4,
+          fontSize: 13.5, color: P.ink, lineHeight: 1.4,
           textDecoration: checked ? 'line-through' : 'none',
           opacity: checked ? 0.5 : 1,
         }}>{t.text}</div>
@@ -529,7 +531,7 @@ function TaskRow({ t, checked, hasNotes, commentCount, linkedLineCount = 0, onOp
       </div>
       <div style={{
         display: 'flex', alignItems: 'flex-start', gap: 4, paddingTop: 2,
-        color: '#a8a095', fontSize: 11,
+        color: P.dimSoft, fontSize: 11,
       }}>
         {commentCount > 0 && (
           <span title={commentCount + ' comments'} style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
@@ -538,7 +540,7 @@ function TaskRow({ t, checked, hasNotes, commentCount, linkedLineCount = 0, onOp
           </span>
         )}
         {hasNotes && !commentCount && (
-          <span title="Has notes" style={{ display: 'inline-block', width: 6, height: 6, borderRadius: 999, background: '#9b4722' }}/>
+          <span title="Has notes" style={{ display: 'inline-block', width: 6, height: 6, borderRadius: 999, background: P.accent }}/>
         )}
       </div>
     </div>
@@ -594,10 +596,10 @@ function AddLineDialog({ state, setState, onClose, categories }) {
     <div style={{
       position: 'fixed', inset: 0, zIndex: 60,
       display: 'flex', alignItems: 'center', justifyContent: 'center',
-      background: 'rgba(24,20,15,0.35)', backdropFilter: 'blur(3px)',
+      background: P.overlayStrong, backdropFilter: 'blur(3px)',
     }} onClick={onClose}>
       <div onClick={e => e.stopPropagation()} style={{
-        width: 480, maxWidth: '94%', background: '#fbf8f3',
+        width: 480, maxWidth: '94%', background: P.drawer,
         borderRadius: 16, padding: '22px 24px',
         display: 'flex', flexDirection: 'column', gap: 14,
         boxShadow: '0 20px 60px rgba(0,0,0,0.25)',
@@ -605,7 +607,7 @@ function AddLineDialog({ state, setState, onClose, categories }) {
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div>
-            <div style={{ fontSize: 10, letterSpacing: 0.8, color: '#7a7266', textTransform: 'uppercase' }}>
+            <div style={{ fontSize: 10, letterSpacing: 0.8, color: P.dim, textTransform: 'uppercase' }}>
               New budget entry
             </div>
             <div style={{
@@ -615,7 +617,7 @@ function AddLineDialog({ state, setState, onClose, categories }) {
           </div>
           <button onClick={onClose} style={{
             border: 'none', background: 'transparent', fontSize: 20,
-            cursor: 'pointer', color: '#7a7266', padding: 0, lineHeight: 1,
+            cursor: 'pointer', color: P.dim, padding: 0, lineHeight: 1,
           }}>×</button>
         </div>
 
@@ -640,9 +642,9 @@ function AddLineDialog({ state, setState, onClose, categories }) {
                 const active = status === s.key;
                 return (
                   <button key={s.key} onClick={() => setStatus(s.key)} style={{
-                    border: '1px solid ' + (active ? s.color : 'rgba(24,20,15,0.15)'),
-                    background: active ? s.color : '#fff',
-                    color: active ? '#fff' : s.color,
+                    border: '1px solid ' + (active ? s.color : P.lineStrong),
+                    background: active ? s.color : P.card,
+                    color: active ? P.card : s.color,
                     padding: '6px 10px', borderRadius: 999,
                     fontSize: 11, fontWeight: 600, cursor: 'pointer',
                     fontFamily: 'inherit', flex: 1,
@@ -663,22 +665,22 @@ function AddLineDialog({ state, setState, onClose, categories }) {
         <label style={{
           display: 'flex', alignItems: 'center', gap: 10,
           padding: '10px 12px', borderRadius: 10,
-          background: alsoTask ? '#f4ead9' : '#fff',
-          border: '1px solid ' + (alsoTask ? '#e0cfa8' : 'rgba(24,20,15,0.08)'),
+          background: alsoTask ? '#f4ead9' : P.card,
+          border: '1px solid ' + (alsoTask ? '#e0cfa8' : P.line),
           cursor: 'pointer', fontSize: 13,
         }}>
           <input type="checkbox" checked={alsoTask}
             onChange={e => setAlsoTask(e.target.checked)}
-            style={{ width: 16, height: 16, accentColor: '#9b4722' }}/>
-          <span style={{ color: '#1d1a15', fontWeight: 500 }}>
+            style={{ width: 16, height: 16, accentColor: P.accent }}/>
+          <span style={{ color: P.ink, fontWeight: 500 }}>
             Also create a linked task
           </span>
         </label>
 
         {alsoTask && (
           <div style={{
-            padding: 12, background: '#fff', borderRadius: 10,
-            border: '1px solid rgba(24,20,15,0.08)',
+            padding: 12, background: P.card, borderRadius: 10,
+            border: `1px solid ${P.line}`,
             display: 'flex', flexDirection: 'column', gap: 10,
           }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
@@ -687,9 +689,9 @@ function AddLineDialog({ state, setState, onClose, categories }) {
                 <div style={{ display: 'flex', gap: 5 }}>
                   {['VJ','Jul'].map(l => (
                     <button key={l} onClick={() => setTaskLane(l)} style={{
-                      border: '1px solid ' + (taskLane === l ? '#1d1a15' : 'rgba(24,20,15,0.15)'),
-                      background: taskLane === l ? '#1d1a15' : '#fff',
-                      color: taskLane === l ? '#fff' : '#1d1a15',
+                      border: '1px solid ' + (taskLane === l ? P.ink : P.lineStrong),
+                      background: taskLane === l ? P.ink : P.card,
+                      color: taskLane === l ? P.card : P.ink,
                       padding: '6px 10px', borderRadius: 999,
                       fontSize: 11, fontWeight: 600, cursor: 'pointer',
                       fontFamily: 'inherit', flex: 1,
@@ -712,7 +714,7 @@ function AddLineDialog({ state, setState, onClose, categories }) {
                     <button key={c} onClick={() => setTaskCat(c)} style={{
                       border: '1px solid ' + (active ? col.color : 'transparent'),
                       background: active ? col.color : col.bg,
-                      color: active ? '#fff' : col.color,
+                      color: active ? P.card : col.color,
                       padding: '4px 11px', borderRadius: 4,
                       fontSize: 11, fontWeight: 600, cursor: 'pointer',
                       fontFamily: 'inherit',
@@ -728,9 +730,9 @@ function AddLineDialog({ state, setState, onClose, categories }) {
                   const active = taskUrgency === u.key;
                   return (
                     <button key={u.key} onClick={() => setTaskUrgency(u.key)} style={{
-                      border: '1px solid ' + (active ? u.color : 'rgba(24,20,15,0.15)'),
-                      background: active ? u.color : '#fff',
-                      color: active ? '#fff' : u.color,
+                      border: '1px solid ' + (active ? u.color : P.lineStrong),
+                      background: active ? u.color : P.card,
+                      color: active ? P.card : u.color,
                       padding: '6px 10px', borderRadius: 999,
                       fontSize: 11, fontWeight: 600, cursor: 'pointer',
                       fontFamily: 'inherit',
@@ -744,13 +746,13 @@ function AddLineDialog({ state, setState, onClose, categories }) {
 
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 4 }}>
           <button onClick={onClose} style={{
-            border: 'none', background: 'transparent', color: '#7a7266',
+            border: 'none', background: 'transparent', color: P.dim,
             padding: '8px 14px', borderRadius: 8, fontSize: 12,
             cursor: 'pointer', fontFamily: 'inherit', fontWeight: 500,
           }}>Cancel</button>
           <button onClick={create} disabled={!label.trim()} style={{
-            background: label.trim() ? '#1d1a15' : 'rgba(24,20,15,0.3)',
-            color: '#fff', border: 'none',
+            background: label.trim() ? P.ink : 'rgba(24,20,15,0.3)',
+            color: P.card, border: 'none',
             padding: '8px 16px', borderRadius: 8, fontSize: 12,
             fontWeight: 600, cursor: label.trim() ? 'pointer' : 'not-allowed',
             fontFamily: 'inherit',
@@ -833,8 +835,8 @@ function FxCalculator({ state, setState }) {
           {currencies.map(c => (
             <button key={c.key} onClick={() => setBase(c.key)} style={{
               border: 'none',
-              background: base === c.key ? '#1d1a15' : 'transparent',
-              color: base === c.key ? '#fff' : '#8a5a2b',
+              background: base === c.key ? P.ink : 'transparent',
+              color: base === c.key ? P.card : '#8a5a2b',
               padding: '3px 10px', borderRadius: 999,
               fontSize: 10, fontWeight: 600, cursor: 'pointer',
               fontFamily: 'inherit', letterSpacing: 0.3,
@@ -856,7 +858,7 @@ function FxCalculator({ state, setState }) {
           style={{
             flex: 1, minWidth: 0, width: 0,
             border: 'none', background: 'transparent', outline: 'none',
-            fontSize: 38, fontWeight: 400, letterSpacing: -1, color: '#1d1a15',
+            fontSize: 38, fontWeight: 400, letterSpacing: -1, color: P.ink,
             fontFamily: '"Instrument Serif", Georgia, serif', padding: 0,
             lineHeight: 1.1,
           }}
@@ -865,7 +867,7 @@ function FxCalculator({ state, setState }) {
 
       <div className="va-sans" style={{
         display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6,
-        fontSize: 12, color: '#57514a',
+        fontSize: 12, color: P.dimStrong,
       }}>
         {other.map(c => (
           <div key={c.key} style={{
@@ -873,7 +875,7 @@ function FxCalculator({ state, setState }) {
           }}>
             <span style={{ color: '#8a5a2b', fontWeight: 700, fontSize: 10, letterSpacing: 1 }}>{c.label}</span>
             <span style={{
-              fontSize: 13, color: '#1d1a15', fontWeight: 500,
+              fontSize: 13, color: P.ink, fontWeight: 500,
               overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
             }}>{c.symbol} {fmt(c.key, vals[c.key])}</span>
           </div>
@@ -891,7 +893,7 @@ function FxCalculator({ state, setState }) {
         </span>
         <button onClick={refresh} disabled={fetching} style={{
           border: 'none', background: 'transparent',
-          color: error ? '#9a2f3f' : '#8a5a2b',
+          color: error ? P.danger : '#8a5a2b',
           cursor: fetching ? 'wait' : 'pointer',
           fontSize: 10, fontWeight: 600, fontFamily: 'inherit',
           padding: 0, textDecoration: 'underline', whiteSpace: 'nowrap',
@@ -952,10 +954,10 @@ function AddTaskDialog({ lane, state, setState, onClose, categories }) {
     <div style={{
       position: 'fixed', inset: 0, zIndex: 60,
       display: 'flex', alignItems: 'center', justifyContent: 'center',
-      background: 'rgba(24,20,15,0.35)', backdropFilter: 'blur(3px)',
+      background: P.overlayStrong, backdropFilter: 'blur(3px)',
     }} onClick={onClose}>
       <div onClick={e => e.stopPropagation()} style={{
-        width: 480, maxWidth: '94%', background: '#fbf8f3',
+        width: 480, maxWidth: '94%', background: P.drawer,
         borderRadius: 16, padding: '22px 24px',
         display: 'flex', flexDirection: 'column', gap: 14,
         boxShadow: '0 20px 60px rgba(0,0,0,0.25)',
@@ -963,7 +965,7 @@ function AddTaskDialog({ lane, state, setState, onClose, categories }) {
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div>
-            <div style={{ fontSize: 10, letterSpacing: 0.8, color: '#7a7266', textTransform: 'uppercase' }}>
+            <div style={{ fontSize: 10, letterSpacing: 0.8, color: P.dim, textTransform: 'uppercase' }}>
               {lane}'s lane
             </div>
             <div style={{
@@ -973,7 +975,7 @@ function AddTaskDialog({ lane, state, setState, onClose, categories }) {
           </div>
           <button onClick={onClose} style={{
             border: 'none', background: 'transparent', fontSize: 20,
-            cursor: 'pointer', color: '#7a7266', padding: 0, lineHeight: 1,
+            cursor: 'pointer', color: P.dim, padding: 0, lineHeight: 1,
           }}>×</button>
         </div>
 
@@ -998,9 +1000,9 @@ function AddTaskDialog({ lane, state, setState, onClose, categories }) {
                 const active = urgency === u.key;
                 return (
                   <button key={u.key} onClick={() => setUrgency(u.key)} style={{
-                    border: '1px solid ' + (active ? u.color : 'rgba(24,20,15,0.15)'),
-                    background: active ? u.color : '#fff',
-                    color: active ? '#fff' : u.color,
+                    border: '1px solid ' + (active ? u.color : P.lineStrong),
+                    background: active ? u.color : P.card,
+                    color: active ? P.card : u.color,
                     padding: '6px 10px', borderRadius: 999,
                     fontSize: 11, fontWeight: 600, cursor: 'pointer',
                     fontFamily: 'inherit', flex: 1,
@@ -1020,7 +1022,7 @@ function AddTaskDialog({ lane, state, setState, onClose, categories }) {
                 <button key={c} onClick={() => setCat(c)} style={{
                   border: '1px solid ' + (active ? col.color : 'transparent'),
                   background: active ? col.color : col.bg,
-                  color: active ? '#fff' : col.color,
+                  color: active ? P.card : col.color,
                   padding: '4px 11px', borderRadius: 4,
                   fontSize: 11, fontWeight: 600, cursor: 'pointer',
                   fontFamily: 'inherit',
@@ -1033,22 +1035,22 @@ function AddTaskDialog({ lane, state, setState, onClose, categories }) {
         <label style={{
           display: 'flex', alignItems: 'center', gap: 10,
           padding: '10px 12px', borderRadius: 10,
-          background: alsoLine ? '#f4ead9' : '#fff',
-          border: '1px solid ' + (alsoLine ? '#e0cfa8' : 'rgba(24,20,15,0.08)'),
+          background: alsoLine ? '#f4ead9' : P.card,
+          border: '1px solid ' + (alsoLine ? '#e0cfa8' : P.line),
           cursor: 'pointer', fontSize: 13,
         }}>
           <input type="checkbox" checked={alsoLine}
             onChange={e => setAlsoLine(e.target.checked)}
-            style={{ width: 16, height: 16, accentColor: '#9b4722' }}/>
-          <span style={{ color: '#1d1a15', fontWeight: 500 }}>
+            style={{ width: 16, height: 16, accentColor: P.accent }}/>
+          <span style={{ color: P.ink, fontWeight: 500 }}>
             Also create a linked budget line
           </span>
         </label>
 
         {alsoLine && (
           <div style={{
-            padding: 12, background: '#fff', borderRadius: 10,
-            border: '1px solid rgba(24,20,15,0.08)',
+            padding: 12, background: P.card, borderRadius: 10,
+            border: `1px solid ${P.line}`,
             display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10,
           }}>
             <div>
@@ -1064,9 +1066,9 @@ function AddTaskDialog({ lane, state, setState, onClose, categories }) {
                   const active = lineStatus === s.key;
                   return (
                     <button key={s.key} onClick={() => setLineStatus(s.key)} style={{
-                      border: '1px solid ' + (active ? s.color : 'rgba(24,20,15,0.15)'),
-                      background: active ? s.color : '#fff',
-                      color: active ? '#fff' : s.color,
+                      border: '1px solid ' + (active ? s.color : P.lineStrong),
+                      background: active ? s.color : P.card,
+                      color: active ? P.card : s.color,
                       padding: '6px 8px', borderRadius: 999,
                       fontSize: 11, fontWeight: 600, cursor: 'pointer',
                       fontFamily: 'inherit', flex: 1,
@@ -1080,13 +1082,13 @@ function AddTaskDialog({ lane, state, setState, onClose, categories }) {
 
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 4 }}>
           <button onClick={onClose} style={{
-            border: 'none', background: 'transparent', color: '#7a7266',
+            border: 'none', background: 'transparent', color: P.dim,
             padding: '8px 14px', borderRadius: 8, fontSize: 12,
             cursor: 'pointer', fontFamily: 'inherit', fontWeight: 500,
           }}>Cancel</button>
           <button onClick={create} disabled={!text.trim()} style={{
-            background: text.trim() ? '#1d1a15' : 'rgba(24,20,15,0.3)',
-            color: '#fff', border: 'none',
+            background: text.trim() ? P.ink : 'rgba(24,20,15,0.3)',
+            color: P.card, border: 'none',
             padding: '8px 16px', borderRadius: 8, fontSize: 12,
             fontWeight: 600, cursor: text.trim() ? 'pointer' : 'not-allowed',
             fontFamily: 'inherit',
@@ -1101,7 +1103,7 @@ function FieldLabel({ children }) {
   return (
     <div style={{
       fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.8,
-      color: '#7a7266', marginBottom: 4,
+      color: P.dim, marginBottom: 4,
     }}>{children}</div>
   );
 }
@@ -1109,7 +1111,7 @@ function FieldLabel({ children }) {
 function fieldStyle() {
   return {
     width: '100%', padding: '8px 10px', borderRadius: 8,
-    border: '1px solid rgba(24,20,15,0.15)', background: '#fff',
+    border: `1px solid ${P.lineStrong}`, background: P.card,
     fontSize: 13, fontFamily: 'inherit', outline: 'none',
   };
 }

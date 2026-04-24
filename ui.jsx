@@ -1,6 +1,8 @@
 // Shared UI components: CategoryChip, UrgencyPill, EditableNumber, EditableText,
 // RingProgress, StackedBudgetBar, TaskDetailDrawer.
 
+const P = KD.palette;
+
 function CategoryChip({ cat, categories, size='sm' }) {
   const c = categories[cat] || { color: '#666', bg: '#eee' };
   const padding = size==='sm' ? '2px 7px' : '3px 10px';
@@ -18,7 +20,7 @@ function CategoryChip({ cat, categories, size='sm' }) {
 }
 
 function UrgencyPill({ urgency, due }) {
-  const color = KD.urgencyColor[urgency] || '#7a7266';
+  const color = KD.urgencyColor[urgency] || P.dim;
   const weight = urgency === 'later' ? 500 : 600;
   const tone = { color, weight };
   return (
@@ -44,7 +46,7 @@ function EditableNumber({ value, onChange, prefix='', suffix='', style }) {
         style={{
           font: 'inherit', color: 'inherit', border: '1.5px solid #9b4722',
           borderRadius: 6, padding: '2px 6px', width: 140,
-          background: '#fff', outline: 'none',
+          background: P.card, outline: 'none',
           ...style,
         }}
       />
@@ -89,7 +91,7 @@ function EditableText({ value, onChange, placeholder='', multiline=false, style 
         style={{
           font: 'inherit', color: 'inherit', border: '1.5px solid #9b4722',
           borderRadius: 6, padding: multiline ? '8px 10px' : '2px 6px',
-          background: '#fff', outline: 'none',
+          background: P.card, outline: 'none',
           width: '100%', resize: multiline ? 'vertical' : 'none',
           minHeight: multiline ? 70 : 'auto',
           fontFamily: 'inherit',
@@ -105,7 +107,7 @@ function EditableText({ value, onChange, placeholder='', multiline=false, style 
         cursor: 'text',
         borderRadius: 4,
         padding: '0 2px',
-        color: value ? 'inherit' : '#a8a095',
+        color: value ? 'inherit' : P.dimSoft,
         ...style,
       }}
       onMouseEnter={e => e.currentTarget.style.background = 'rgba(155,71,34,0.08)'}
@@ -115,7 +117,7 @@ function EditableText({ value, onChange, placeholder='', multiline=false, style 
   );
 }
 
-function RingProgress({ pct, size=64, stroke=6, color='#9b4722', bg='rgba(24,20,15,0.08)' }) {
+function RingProgress({ pct, size=64, stroke=6, color=P.accent, bg=P.line }) {
   const r = (size - stroke) / 2;
   const c = 2 * Math.PI * r;
   const off = c * (1 - pct/100);
@@ -132,7 +134,7 @@ function RingProgress({ pct, size=64, stroke=6, color='#9b4722', bg='rgba(24,20,
       <div style={{
         position: 'absolute', inset: 0, display: 'flex', alignItems: 'center',
         justifyContent: 'center', flexDirection: 'column',
-        fontSize: size/4.5, fontWeight: 600, color: '#1d1a15', lineHeight: 1,
+        fontSize: size/4.5, fontWeight: 600, color: P.ink, lineHeight: 1,
       }}>{pct}%</div>
     </div>
   );
@@ -144,7 +146,7 @@ function StackedBudgetBar({ lines, totalEUR }) {
     <div>
       <div style={{
         display: 'flex', height: 10, borderRadius: 999,
-        overflow: 'hidden', background: 'rgba(24,20,15,0.06)',
+        overflow: 'hidden', background: P.lineSoft,
       }}>
         {lines.map(l => (
           <div key={l.id} style={{
@@ -155,7 +157,7 @@ function StackedBudgetBar({ lines, totalEUR }) {
       </div>
       <div style={{
         display: 'flex', flexWrap: 'wrap', gap: '6px 18px', marginTop: 12,
-        fontSize: 12, color: '#57514a',
+        fontSize: 12, color: P.dimStrong,
       }}>
         {lines.map(l => (
           <div key={l.id} style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
@@ -271,35 +273,35 @@ function TaskDetailDrawer({ task, lane, state, setState, onClose, onOpenLine }) 
     <div style={{
       position: 'fixed', inset: 0, zIndex: 50,
       display: 'flex', justifyContent: 'flex-end',
-      background: 'rgba(24,20,15,0.25)',
+      background: P.overlay,
       backdropFilter: 'blur(2px)',
     }} onClick={onClose}>
       <div style={{
         width: 420, maxWidth: '90%', height: '100%',
-        background: '#fbf8f3', borderLeft: '1px solid rgba(24,20,15,0.1)',
+        background: P.drawer, borderLeft: '1px solid rgba(24,20,15,0.1)',
         boxShadow: '-20px 0 60px rgba(0,0,0,0.12)',
         padding: '24px 26px', overflowY: 'auto',
         display: 'flex', flexDirection: 'column', gap: 18,
       }} onClick={e => e.stopPropagation()}>
 
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-          <div style={{ fontSize: 11, letterSpacing: 0.8, color: '#7a7266', textTransform: 'uppercase' }}>
+          <div style={{ fontSize: 11, letterSpacing: 0.8, color: P.dim, textTransform: 'uppercase' }}>
             {lane}'s lane · {task.urgency === 'asap' ? 'ASAP' : task.due}
           </div>
           <button onClick={onClose} style={{
             border: 'none', background: 'transparent', fontSize: 20,
-            cursor: 'pointer', color: '#7a7266', padding: 0, lineHeight: 1,
+            cursor: 'pointer', color: P.dim, padding: 0, lineHeight: 1,
           }}>×</button>
         </div>
 
         <div>
-          <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.8, color: '#7a7266', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
+          <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.8, color: P.dim, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
             Task <PencilIcon/>
           </div>
           <div style={{
-            fontSize: 20, fontWeight: 500, lineHeight: 1.3, color: '#1d1a15',
-            border: '1px dashed rgba(24,20,15,0.12)', borderRadius: 8,
-            padding: '8px 10px', background: '#fff',
+            fontSize: 20, fontWeight: 500, lineHeight: 1.3, color: P.ink,
+            border: `1px dashed ${P.lineMid}`, borderRadius: 8,
+            padding: '8px 10px', background: P.card,
           }}>
             <EditableText
               value={task.text}
@@ -309,7 +311,7 @@ function TaskDetailDrawer({ task, lane, state, setState, onClose, onOpenLine }) 
           </div>
 
           <div style={{ marginTop: 14 }}>
-            <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.8, color: '#7a7266', marginBottom: 6 }}>
+            <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.8, color: P.dim, marginBottom: 6 }}>
               Category
             </div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
@@ -321,7 +323,7 @@ function TaskDetailDrawer({ task, lane, state, setState, onClose, onOpenLine }) 
                     border: active ? '1px solid ' + col.color : '1px solid transparent',
                     cursor: 'pointer',
                     background: active ? col.color : col.bg,
-                    color: active ? '#fff' : col.color,
+                    color: active ? P.card : col.color,
                     padding: '4px 11px', borderRadius: 4,
                     fontSize: 11, fontWeight: 600, letterSpacing: 0.2,
                     fontFamily: 'inherit',
@@ -334,7 +336,7 @@ function TaskDetailDrawer({ task, lane, state, setState, onClose, onOpenLine }) 
 
           <div style={{ marginTop: 12, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
             <div>
-              <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.8, color: '#7a7266', marginBottom: 6 }}>
+              <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.8, color: P.dim, marginBottom: 6 }}>
                 Urgency
               </div>
               <div style={{ display: 'flex', gap: 5 }}>
@@ -342,9 +344,9 @@ function TaskDetailDrawer({ task, lane, state, setState, onClose, onOpenLine }) 
                   const active = task.urgency === u.key;
                   return (
                     <button key={u.key} onClick={() => updateTask({ urgency: u.key })} style={{
-                      border: '1px solid ' + (active ? u.color : 'rgba(24,20,15,0.15)'),
+                      border: '1px solid ' + (active ? u.color : P.lineStrong),
                       background: active ? u.color : 'transparent',
-                      color: active ? '#fff' : u.color,
+                      color: active ? P.card : u.color,
                       padding: '4px 11px', borderRadius: 999,
                       fontSize: 11, fontWeight: 600, cursor: 'pointer',
                       fontFamily: 'inherit',
@@ -354,13 +356,13 @@ function TaskDetailDrawer({ task, lane, state, setState, onClose, onOpenLine }) 
               </div>
             </div>
             <div>
-              <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.8, color: '#7a7266', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.8, color: P.dim, marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
                 Due <PencilIcon/>
               </div>
               <div style={{
-                fontSize: 13, color: '#1d1a15', fontWeight: 500,
-                border: '1px dashed rgba(24,20,15,0.12)', borderRadius: 6,
-                padding: '5px 9px', background: '#fff',
+                fontSize: 13, color: P.ink, fontWeight: 500,
+                border: `1px dashed ${P.lineMid}`, borderRadius: 6,
+                padding: '5px 9px', background: P.card,
               }}>
                 <EditableText
                   value={task.due}
@@ -383,24 +385,24 @@ function TaskDetailDrawer({ task, lane, state, setState, onClose, onOpenLine }) 
         <label style={{
           display: 'flex', alignItems: 'center', gap: 10,
           padding: '10px 12px', borderRadius: 10,
-          background: checked ? '#eaf2ec' : '#fff',
-          border: '1px solid ' + (checked ? '#c4dcc9' : 'rgba(24,20,15,0.08)'),
+          background: checked ? '#eaf2ec' : P.card,
+          border: '1px solid ' + (checked ? '#c4dcc9' : P.line),
           cursor: 'pointer', fontSize: 14,
         }}>
           <input type="checkbox" checked={checked}
             onChange={e => setState(s => ({ ...s, checked: { ...s.checked, [task.id]: e.target.checked }}))}
-            style={{ width: 18, height: 18, accentColor: '#2f7d5b' }}/>
-          <span style={{ color: checked ? '#2f7d5b' : '#1d1a15', fontWeight: 500 }}>
+            style={{ width: 18, height: 18, accentColor: P.success }}/>
+          <span style={{ color: checked ? P.success : P.ink, fontWeight: 500 }}>
             {checked ? 'Done' : 'Mark as done'}
           </span>
         </label>
 
         <div>
-          <div style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.8, color: '#7a7266', marginBottom: 6 }}>
+          <div style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.8, color: P.dim, marginBottom: 6 }}>
             Notes
           </div>
           <div style={{
-            background: '#fff', border: '1px solid rgba(24,20,15,0.08)', borderRadius: 10,
+            background: P.card, border: `1px solid ${P.line}`, borderRadius: 10,
             padding: 12, minHeight: 80, fontSize: 14, lineHeight: 1.45,
           }}>
             <EditableText
@@ -413,12 +415,12 @@ function TaskDetailDrawer({ task, lane, state, setState, onClose, onOpenLine }) 
         </div>
 
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.8, color: '#7a7266', marginBottom: 8 }}>
+          <div style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.8, color: P.dim, marginBottom: 8 }}>
             Comments
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 12 }}>
             {(noteObj.comments || []).length === 0 && (
-              <div style={{ fontSize: 13, color: '#a8a095', fontStyle: 'italic' }}>
+              <div style={{ fontSize: 13, color: P.dimSoft, fontStyle: 'italic' }}>
                 No comments yet — leave a note for each other.
               </div>
             )}
@@ -429,24 +431,24 @@ function TaskDetailDrawer({ task, lane, state, setState, onClose, onOpenLine }) 
                 alignSelf: c.author === 'VJ' ? 'flex-start' : 'flex-end',
                 maxWidth: '85%',
               }}>
-                <div style={{ fontSize: 11, color: '#57514a', marginBottom: 2, fontWeight: 600 }}>
+                <div style={{ fontSize: 11, color: P.dimStrong, marginBottom: 2, fontWeight: 600 }}>
                   {c.author} · {new Date(c.at).toLocaleDateString()}
                 </div>
-                <div style={{ fontSize: 13, color: '#1d1a15', lineHeight: 1.4 }}>{c.text}</div>
+                <div style={{ fontSize: 13, color: P.ink, lineHeight: 1.4 }}>{c.text}</div>
               </div>
             ))}
           </div>
 
           <div style={{
-            background: '#fff', border: '1px solid rgba(24,20,15,0.08)', borderRadius: 10,
+            background: P.card, border: `1px solid ${P.line}`, borderRadius: 10,
             padding: 10, display: 'flex', flexDirection: 'column', gap: 8,
           }}>
-            <div style={{ display: 'flex', gap: 6, fontSize: 11, color: '#7a7266', alignItems: 'center' }}>
+            <div style={{ display: 'flex', gap: 6, fontSize: 11, color: P.dim, alignItems: 'center' }}>
               Posting as
               {['VJ', 'Jul'].map(a => (
                 <button key={a} onClick={() => setAuthor(a)} style={{
-                  border: 'none', background: author === a ? '#1d1a15' : 'transparent',
-                  color: author === a ? '#fff' : '#57514a',
+                  border: 'none', background: author === a ? P.ink : 'transparent',
+                  color: author === a ? P.card : P.dimStrong,
                   padding: '2px 8px', borderRadius: 999, fontSize: 11, cursor: 'pointer',
                   fontFamily: 'inherit', fontWeight: 600,
                 }}>{a}</button>
@@ -464,7 +466,7 @@ function TaskDetailDrawer({ task, lane, state, setState, onClose, onOpenLine }) 
             />
             <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
               <button onClick={postComment} style={{
-                background: '#1d1a15', color: '#fff', border: 'none',
+                background: P.ink, color: P.card, border: 'none',
                 padding: '6px 14px', borderRadius: 999, fontSize: 12,
                 fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
               }}>Post</button>
@@ -473,12 +475,12 @@ function TaskDetailDrawer({ task, lane, state, setState, onClose, onOpenLine }) 
         </div>
 
         <div style={{
-          paddingTop: 12, borderTop: '1px solid rgba(24,20,15,0.08)',
+          paddingTop: 12, borderTop: `1px solid ${P.line}`,
           display: 'flex', justifyContent: 'flex-end',
         }}>
           <button onClick={deleteTask} style={{
             border: '1px solid rgba(154,47,63,0.3)', background: 'transparent',
-            color: '#9a2f3f', padding: '6px 12px', borderRadius: 8,
+            color: P.danger, padding: '6px 12px', borderRadius: 8,
             fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
           }}>Delete task</button>
         </div>
@@ -494,29 +496,29 @@ function LinkedLinesBlock({ lines, allLines, onOpenLine, onUnlink, onLink }) {
 
   return (
     <div>
-      <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.8, color: '#7a7266', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
+      <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.8, color: P.dim, marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
         Linked budget lines
       </div>
       {lines.length === 0 && !picking && (
-        <div style={{ fontSize: 12, color: '#a8a095', fontStyle: 'italic', marginBottom: 6 }}>
+        <div style={{ fontSize: 12, color: P.dimSoft, fontStyle: 'italic', marginBottom: 6 }}>
           No linked line items.
         </div>
       )}
       {lines.map(l => (
         <div key={l.id} style={{
-          background: '#fff', border: '1px solid rgba(24,20,15,0.08)', borderRadius: 10,
+          background: P.card, border: `1px solid ${P.line}`, borderRadius: 10,
           padding: '8px 10px', marginBottom: 6,
           display: 'grid', gridTemplateColumns: '8px 1fr auto auto', gap: 10, alignItems: 'center',
           cursor: 'pointer',
         }} onClick={() => onOpenLine && onOpenLine(l.id)}>
           <span style={{ width: 8, height: 8, borderRadius: 999, background: statusColor[l.status] || '#bbb' }}/>
           <div>
-            <div style={{ fontSize: 13, fontWeight: 500, color: '#1d1a15' }}>{l.label}</div>
-            <div style={{ fontSize: 11, color: '#7a7266', marginTop: 1 }}>{l.status}</div>
+            <div style={{ fontSize: 13, fontWeight: 500, color: P.ink }}>{l.label}</div>
+            <div style={{ fontSize: 11, color: P.dim, marginTop: 1 }}>{l.status}</div>
           </div>
-          <div style={{ fontSize: 13, fontWeight: 500, color: '#1d1a15' }}>€{(l.amountEUR || 0).toLocaleString('de-DE')}</div>
+          <div style={{ fontSize: 13, fontWeight: 500, color: P.ink }}>€{(l.amountEUR || 0).toLocaleString('de-DE')}</div>
           <button onClick={e => { e.stopPropagation(); onUnlink(l.id); }} style={{
-            border: 'none', background: 'transparent', color: '#9a2f3f',
+            border: 'none', background: 'transparent', color: P.danger,
             cursor: 'pointer', fontSize: 11, fontWeight: 600, fontFamily: 'inherit',
           }}>Unlink</button>
         </div>
@@ -529,7 +531,7 @@ function LinkedLinesBlock({ lines, allLines, onOpenLine, onUnlink, onLink }) {
             defaultValue=""
             style={{
               flex: 1, fontFamily: 'inherit', fontSize: 12, padding: '6px 8px',
-              borderRadius: 8, border: '1px solid rgba(24,20,15,0.15)', background: '#fff',
+              borderRadius: 8, border: '1px solid rgba(24,20,15,0.15)', background: P.card,
             }}
           >
             <option value="" disabled>Pick a line item…</option>
@@ -538,14 +540,14 @@ function LinkedLinesBlock({ lines, allLines, onOpenLine, onUnlink, onLink }) {
             ))}
           </select>
           <button onClick={() => setPicking(false)} style={{
-            border: 'none', background: 'transparent', color: '#7a7266',
+            border: 'none', background: 'transparent', color: P.dim,
             cursor: 'pointer', fontSize: 11, fontFamily: 'inherit',
           }}>Cancel</button>
         </div>
       ) : (
         available.length > 0 && (
           <button onClick={() => setPicking(true)} style={{
-            border: '1px dashed rgba(24,20,15,0.18)', background: 'transparent', color: '#7a7266',
+            border: `1px dashed ${P.lineDashed}`, background: 'transparent', color: P.dim,
             padding: '5px 10px', borderRadius: 8, cursor: 'pointer',
             fontSize: 11, fontWeight: 500, fontFamily: 'inherit',
           }}>+ Link existing line</button>
@@ -596,34 +598,34 @@ function LineDetailDrawer({ lineId, state, setState, onClose, onOpenTask }) {
     <div style={{
       position: 'fixed', inset: 0, zIndex: 50,
       display: 'flex', justifyContent: 'flex-end',
-      background: 'rgba(24,20,15,0.25)', backdropFilter: 'blur(2px)',
+      background: P.overlay, backdropFilter: 'blur(2px)',
     }} onClick={onClose}>
       <div style={{
         width: 420, maxWidth: '90%', height: '100%',
-        background: '#fbf8f3', borderLeft: '1px solid rgba(24,20,15,0.1)',
+        background: P.drawer, borderLeft: '1px solid rgba(24,20,15,0.1)',
         boxShadow: '-20px 0 60px rgba(0,0,0,0.12)',
         padding: '24px 26px', overflowY: 'auto',
         display: 'flex', flexDirection: 'column', gap: 18,
       }} onClick={e => e.stopPropagation()}>
 
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-          <div style={{ fontSize: 11, letterSpacing: 0.8, color: '#7a7266', textTransform: 'uppercase' }}>
+          <div style={{ fontSize: 11, letterSpacing: 0.8, color: P.dim, textTransform: 'uppercase' }}>
             Budget line · {line.status}
           </div>
           <button onClick={onClose} style={{
             border: 'none', background: 'transparent', fontSize: 20,
-            cursor: 'pointer', color: '#7a7266', padding: 0, lineHeight: 1,
+            cursor: 'pointer', color: P.dim, padding: 0, lineHeight: 1,
           }}>×</button>
         </div>
 
         <div>
-          <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.8, color: '#7a7266', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
+          <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.8, color: P.dim, marginBottom: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
             Label <PencilIcon/>
           </div>
           <div style={{
-            fontSize: 18, fontWeight: 500, lineHeight: 1.3, color: '#1d1a15',
-            border: '1px dashed rgba(24,20,15,0.12)', borderRadius: 8,
-            padding: '8px 10px', background: '#fff',
+            fontSize: 18, fontWeight: 500, lineHeight: 1.3, color: P.ink,
+            border: `1px dashed ${P.lineMid}`, borderRadius: 8,
+            padding: '8px 10px', background: P.card,
           }}>
             <EditableText
               value={line.label}
@@ -634,13 +636,13 @@ function LineDetailDrawer({ lineId, state, setState, onClose, onOpenTask }) {
 
           <div style={{ marginTop: 12, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
             <div>
-              <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.8, color: '#7a7266', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.8, color: P.dim, marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
                 Amount (EUR) <PencilIcon/>
               </div>
               <div style={{
-                fontSize: 16, fontWeight: 500, color: '#1d1a15',
-                border: '1px dashed rgba(24,20,15,0.12)', borderRadius: 6,
-                padding: '5px 9px', background: '#fff',
+                fontSize: 16, fontWeight: 500, color: P.ink,
+                border: `1px dashed ${P.lineMid}`, borderRadius: 6,
+                padding: '5px 9px', background: P.card,
               }}>
                 €<EditableNumber
                   value={line.amountEUR}
@@ -649,7 +651,7 @@ function LineDetailDrawer({ lineId, state, setState, onClose, onOpenTask }) {
               </div>
             </div>
             <div>
-              <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.8, color: '#7a7266', marginBottom: 6 }}>
+              <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.8, color: P.dim, marginBottom: 6 }}>
                 Status
               </div>
               <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
@@ -657,9 +659,9 @@ function LineDetailDrawer({ lineId, state, setState, onClose, onOpenTask }) {
                   const active = line.status === s.key;
                   return (
                     <button key={s.key} onClick={() => updateLine({ status: s.key })} style={{
-                      border: '1px solid ' + (active ? s.color : 'rgba(24,20,15,0.15)'),
+                      border: '1px solid ' + (active ? s.color : P.lineStrong),
                       background: active ? s.color : 'transparent',
-                      color: active ? '#fff' : s.color,
+                      color: active ? P.card : s.color,
                       padding: '4px 10px', borderRadius: 999,
                       fontSize: 11, fontWeight: 600, cursor: 'pointer',
                       fontFamily: 'inherit',
@@ -672,11 +674,11 @@ function LineDetailDrawer({ lineId, state, setState, onClose, onOpenTask }) {
         </div>
 
         <div>
-          <div style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.8, color: '#7a7266', marginBottom: 6 }}>
+          <div style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.8, color: P.dim, marginBottom: 6 }}>
             Note
           </div>
           <div style={{
-            background: '#fff', border: '1px solid rgba(24,20,15,0.08)', borderRadius: 10,
+            background: P.card, border: `1px solid ${P.line}`, borderRadius: 10,
             padding: 12, minHeight: 50, fontSize: 13, lineHeight: 1.45,
           }}>
             <EditableText
@@ -689,31 +691,31 @@ function LineDetailDrawer({ lineId, state, setState, onClose, onOpenTask }) {
         </div>
 
         <div>
-          <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.8, color: '#7a7266', marginBottom: 6 }}>
+          <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.8, color: P.dim, marginBottom: 6 }}>
             Linked tasks
           </div>
           {linkedTasks.length === 0 && !picking && (
-            <div style={{ fontSize: 12, color: '#a8a095', fontStyle: 'italic', marginBottom: 6 }}>
+            <div style={{ fontSize: 12, color: P.dimSoft, fontStyle: 'italic', marginBottom: 6 }}>
               No linked tasks.
             </div>
           )}
           {linkedTasks.map(t => (
             <div key={t.id} style={{
-              background: '#fff', border: '1px solid rgba(24,20,15,0.08)', borderRadius: 10,
+              background: P.card, border: `1px solid ${P.line}`, borderRadius: 10,
               padding: '8px 10px', marginBottom: 6,
               display: 'grid', gridTemplateColumns: '1fr auto auto', gap: 10, alignItems: 'center',
               cursor: 'pointer',
             }} onClick={() => onOpenTask && onOpenTask(t.id, t.lane)}>
               <div>
-                <div style={{ fontSize: 13, fontWeight: 500, color: '#1d1a15',
+                <div style={{ fontSize: 13, fontWeight: 500, color: P.ink,
                   textDecoration: state.checked[t.id] ? 'line-through' : 'none',
                   opacity: state.checked[t.id] ? 0.5 : 1,
                 }}>{t.text}</div>
-                <div style={{ fontSize: 11, color: '#7a7266', marginTop: 1 }}>{t.lane}'s lane · {t.due}</div>
+                <div style={{ fontSize: 11, color: P.dim, marginTop: 1 }}>{t.lane}'s lane · {t.due}</div>
               </div>
               <CategoryChip cat={t.cat} categories={state.categories || KD_DEFAULTS.categories}/>
               <button onClick={e => { e.stopPropagation(); unlinkTask(t.id); }} style={{
-                border: 'none', background: 'transparent', color: '#9a2f3f',
+                border: 'none', background: 'transparent', color: P.danger,
                 cursor: 'pointer', fontSize: 11, fontWeight: 600, fontFamily: 'inherit',
               }}>Unlink</button>
             </div>
@@ -726,7 +728,7 @@ function LineDetailDrawer({ lineId, state, setState, onClose, onOpenTask }) {
                 defaultValue=""
                 style={{
                   flex: 1, fontFamily: 'inherit', fontSize: 12, padding: '6px 8px',
-                  borderRadius: 8, border: '1px solid rgba(24,20,15,0.15)', background: '#fff',
+                  borderRadius: 8, border: '1px solid rgba(24,20,15,0.15)', background: P.card,
                 }}
               >
                 <option value="" disabled>Pick a task…</option>
@@ -735,14 +737,14 @@ function LineDetailDrawer({ lineId, state, setState, onClose, onOpenTask }) {
                 ))}
               </select>
               <button onClick={() => setPicking(false)} style={{
-                border: 'none', background: 'transparent', color: '#7a7266',
+                border: 'none', background: 'transparent', color: P.dim,
                 cursor: 'pointer', fontSize: 11, fontFamily: 'inherit',
               }}>Cancel</button>
             </div>
           ) : (
             availableTasks.length > 0 && (
               <button onClick={() => setPicking(true)} style={{
-                border: '1px dashed rgba(24,20,15,0.18)', background: 'transparent', color: '#7a7266',
+                border: `1px dashed ${P.lineDashed}`, background: 'transparent', color: P.dim,
                 padding: '5px 10px', borderRadius: 8, cursor: 'pointer',
                 fontSize: 11, fontWeight: 500, fontFamily: 'inherit',
               }}>+ Link existing task</button>
@@ -753,12 +755,12 @@ function LineDetailDrawer({ lineId, state, setState, onClose, onOpenTask }) {
         <div style={{ flex: 1 }}/>
 
         <div style={{
-          paddingTop: 12, borderTop: '1px solid rgba(24,20,15,0.08)',
+          paddingTop: 12, borderTop: `1px solid ${P.line}`,
           display: 'flex', justifyContent: 'flex-end',
         }}>
           <button onClick={deleteLine} style={{
             border: '1px solid rgba(154,47,63,0.3)', background: 'transparent',
-            color: '#9a2f3f', padding: '6px 12px', borderRadius: 8,
+            color: P.danger, padding: '6px 12px', borderRadius: 8,
             fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
           }}>Delete line item</button>
         </div>

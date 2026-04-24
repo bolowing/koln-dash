@@ -28,14 +28,25 @@
   const URGENCY_COLOR = Object.fromEntries(URGENCY_OPTIONS.map(o => [o.key, o.color]));
 
   const PALETTE = {
-    paper:  '#f5f1ea',
-    card:   '#ffffff',
-    ink:    '#1d1a15',
-    dim:    '#7a7266',
-    line:   'rgba(24,20,15,0.08)',
-    accent: '#9b4722',
+    paper:    '#f5f1ea',
+    card:     '#ffffff',
+    drawer:   '#fbf8f3',
+    hover:    '#faf6ef',
+    ink:      '#1d1a15',
+    dimStrong:'#57514a',
+    dim:      '#7a7266',
+    dimSoft:  '#a8a095',
+    accent:   '#9b4722',
     accentSoft: '#e8dfd3',
-    danger: '#9a2f3f',
+    danger:   '#9a2f3f',
+    success:  '#2f7d5b',
+    lineSoft:   'rgba(24,20,15,0.06)',
+    line:       'rgba(24,20,15,0.08)',
+    lineMid:    'rgba(24,20,15,0.12)',
+    lineStrong: 'rgba(24,20,15,0.15)',
+    lineDashed: 'rgba(24,20,15,0.18)',
+    overlay:       'rgba(24,20,15,0.25)',
+    overlayStrong: 'rgba(24,20,15,0.35)',
   };
 
   const DEFAULTS = {
