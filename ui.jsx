@@ -5,17 +5,19 @@ const P = KD.palette;
 
 function CategoryChip({ cat, categories, size='sm' }) {
   const c = categories[cat] || { color: '#666', bg: '#eee' };
+  const fallback = (KD_DEFAULTS.categories[cat] || {});
+  const emoji = c.emoji || fallback.emoji;
   const padding = size==='sm' ? '2px 7px' : '3px 10px';
   const fontSize = size==='sm' ? 10 : 11;
   return (
     <span style={{
-      display: 'inline-block',
+      display: 'inline-flex', alignItems: 'center', gap: 4,
       background: c.bg, color: c.color,
       padding, borderRadius: 4,
       fontSize, fontWeight: 600,
       letterSpacing: 0.2,
       fontFamily: 'inherit',
-    }}>{cat}</span>
+    }}>{emoji && <span aria-hidden="true" style={{ fontSize: fontSize + 1 }}>{emoji}</span>}{cat}</span>
   );
 }
 
@@ -114,7 +116,7 @@ function EditableText({ value, onChange, placeholder='', multiline=false, style 
       onMouseEnter={e => e.currentTarget.style.background = 'rgba(155,71,34,0.08)'}
       onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
       title="Click to edit"
-    >{value || placeholder}</span>
+    >{value ? (multiline ? KD.linkify(value) : value) : placeholder}</span>
   );
 }
 
@@ -187,9 +189,8 @@ function TaskDetailDrawer({ task, lane, state, setState, onClose, onOpenLine }) 
   const checked = !!state.checked[task.id];
   const noteObj = state.notes[task.id] || { text: '', comments: [] };
   const [draft, setDraft] = React.useState('');
-  const [author, setAuthor] = React.useState(() => localStorage.getItem('kd-author') || 'VJ');
-
-  React.useEffect(() => { localStorage.setItem('kd-author', author); }, [author]);
+  const author = state.meta.currentUser || 'VJ';
+  const setAuthor = (a) => setState(s => ({ ...s, meta: { ...s.meta, currentUser: a } }));
 
   const update = (fn) => setState(s => {
     const nextNotes = { ...s.notes };
@@ -256,14 +257,18 @@ function TaskDetailDrawer({ task, lane, state, setState, onClose, onOpenLine }) 
 
   const postComment = () => {
     if (!draft.trim()) return;
-    update(cur => ({
-      ...cur,
-      comments: [...(cur.comments || []), {
-        id: 'c' + Date.now(),
-        author, text: draft.trim(),
-        at: new Date().toISOString(),
-      }],
-    }));
+    const text = draft.trim();
+    setState(s => {
+      const nextNotes = { ...s.notes };
+      const cur = nextNotes[task.id] || { text: '', comments: [] };
+      nextNotes[task.id] = {
+        ...cur,
+        comments: [...(cur.comments || []), {
+          id: 'c' + Date.now(), author, text, at: new Date().toISOString(),
+        }],
+      };
+      return KD.logActivity({ ...s, notes: nextNotes }, author, 'commented on', task.text);
+    });
     setDraft('');
   };
 
@@ -435,7 +440,7 @@ function TaskDetailDrawer({ task, lane, state, setState, onClose, onOpenLine }) 
                 <div style={{ fontSize: 11, color: P.dimStrong, marginBottom: 2, fontWeight: 600 }}>
                   {c.author} · {new Date(c.at).toLocaleDateString()}
                 </div>
-                <div style={{ fontSize: 13, color: P.ink, lineHeight: 1.4 }}>{c.text}</div>
+                <div style={{ fontSize: 13, color: P.ink, lineHeight: 1.4, wordBreak: 'break-word' }}>{KD.linkify(c.text)}</div>
               </div>
             ))}
           </div>

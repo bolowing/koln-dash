@@ -17,9 +17,17 @@ function VariationA({ onReset }) {
   const days     = KD.daysUntil(state.meta.departure);
   const cats     = state.categories || KD_DEFAULTS.categories;
 
-  const toggleCheck = (id) => setState(s => ({
-    ...s, checked: { ...s.checked, [id]: !s.checked[id] }
-  }));
+  const toggleCheck = (id) => setState(s => {
+    const willBeChecked = !s.checked[id];
+    const next = { ...s, checked: { ...s.checked, [id]: willBeChecked } };
+    if (!willBeChecked) return next;
+    const task = [...s.lanes.VJ, ...s.lanes.Jul].find(t => t.id === id);
+    if (!task) return next;
+    return KD.logActivity(next, s.meta.currentUser || 'VJ', 'completed', task.text);
+  });
+
+  const setCurrentUser = (u) =>
+    setState(s => ({ ...s, meta: { ...s.meta, currentUser: u } }));
 
   const addTask = (lane) => setAddTaskLane(lane);
 
@@ -96,12 +104,16 @@ function VariationA({ onReset }) {
 
         <div className="va-sans v1-masthead-right" style={{
           textAlign: 'right', fontSize: 12, color: P.dimStrong, lineHeight: 1.7,
+          display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8,
         }}>
-          <div style={{ color: P.dim }}>Köln weather</div>
-          <div><strong style={{ color: P.ink }}>15°</strong> · Cloudy</div>
-          <div style={{ marginTop: 6 }}>EUR → USD · {state.money.fxEurUsd.toFixed(2)}</div>
+          <WhoAmI currentUser={state.meta.currentUser || 'VJ'} setCurrentUser={setCurrentUser}/>
+          <div style={{ color: P.dim, fontSize: 11 }}>
+            Köln · 15° Cloudy · €1 = ${state.money.fxEurUsd.toFixed(2)}
+          </div>
         </div>
       </header>
+
+      <ActivityFeed activity={state.activity || []}/>
 
       {/* Hero row */}
       <section className="v1-hero-row" style={{
@@ -415,6 +427,63 @@ function VariationA({ onReset }) {
   );
 }
 
+function WhoAmI({ currentUser, setCurrentUser }) {
+  return (
+    <div className="v1-whoami" style={{
+      display: 'flex', alignItems: 'center', gap: 6,
+      background: P.card, borderRadius: 999, padding: 3,
+      border: `1px solid ${P.line}`, fontSize: 11,
+    }}>
+      <span style={{ color: P.dim, paddingLeft: 8, paddingRight: 2, fontWeight: 500 }}>Signed in as</span>
+      {['VJ', 'Jul'].map(u => (
+        <button key={u} onClick={() => setCurrentUser(u)} style={{
+          border: 'none', cursor: 'pointer', fontFamily: 'inherit',
+          padding: '4px 12px', borderRadius: 999, fontSize: 11, fontWeight: 600,
+          background: currentUser === u ? P.ink : 'transparent',
+          color: currentUser === u ? P.card : P.dimStrong,
+        }}>{u}</button>
+      ))}
+    </div>
+  );
+}
+
+function ActivityFeed({ activity }) {
+  if (!activity || !activity.length) return null;
+  const fmtAgo = (iso) => {
+    const diff = Date.now() - new Date(iso).getTime();
+    const m = Math.floor(diff / 60000);
+    if (m < 1) return 'just now';
+    if (m < 60) return m + 'm';
+    const h = Math.floor(m / 60);
+    if (h < 24) return h + 'h';
+    return Math.floor(h / 24) + 'd';
+  };
+  const latest = activity.slice(0, 5);
+  return (
+    <section className="v1-activity" style={{
+      marginBottom: 20, padding: '10px 14px', background: P.accentSoft,
+      borderRadius: 12, border: `1px solid ${P.line}`,
+      display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap',
+    }}>
+      <span className="va-mono" style={{
+        fontSize: 10, letterSpacing: 2, textTransform: 'uppercase',
+        color: P.accent, fontWeight: 600, flexShrink: 0,
+      }}>Recent</span>
+      {latest.map((a, i) => (
+        <span key={a.id || i} className="va-sans" style={{
+          fontSize: 12, color: P.dimStrong, display: 'flex', alignItems: 'baseline', gap: 6,
+          minWidth: 0,
+        }}>
+          <strong style={{ color: P.ink, fontWeight: 600 }}>{a.author}</strong>
+          <span style={{ color: P.dim }}>{a.verb}</span>
+          <span style={{ color: P.ink, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 220 }}>{a.target}</span>
+          <span style={{ color: P.dimSoft, fontSize: 10 }}>· {fmtAgo(a.at)}</span>
+        </span>
+      ))}
+    </section>
+  );
+}
+
 function MoneyStat({ label, value, sub }) {
   return (
     <div>
@@ -442,7 +511,7 @@ function StatusDot({ status }) {
   );
 }
 
-function Lane({ title, lane, visible, filterASAP, state, onOpen, onAdd, onToggle, categories }) {
+function Lane({ title, lane, visible, filterASAP, state, setState, onOpen, onAdd, onToggle, categories }) {
   if (!visible) return <div/>;
   const lp = KD.laneProgress(state, lane);
   let tasks = state.lanes[lane];
@@ -478,12 +547,51 @@ function Lane({ title, lane, visible, filterASAP, state, onOpen, onAdd, onToggle
         ))}
       </div>
 
-      <button onClick={onAdd} className="va-sans" style={{
-        marginTop: 10, border: `1px dashed ${P.lineDashed}`,
-        background: 'transparent', color: P.dim,
-        padding: '8px 12px', borderRadius: 10, cursor: 'pointer',
-        fontSize: 12, width: '100%', fontFamily: 'inherit', fontWeight: 500,
-      }}>+ Add task to {lane}'s lane</button>
+      <QuickAddTask lane={lane} setState={setState} onMore={onAdd}/>
+    </div>
+  );
+}
+
+function QuickAddTask({ lane, setState, onMore }) {
+  const [text, setText] = React.useState('');
+  const submit = () => {
+    const trimmed = text.trim();
+    if (!trimmed) return;
+    const taskId = 'x' + Date.now();
+    setState(s => {
+      const next = {
+        ...s,
+        lanes: {
+          ...s.lanes,
+          [lane]: [...s.lanes[lane], {
+            id: taskId, text: trimmed,
+            cat: 'Documents', due: 'TBD', urgency: 'soon',
+          }],
+        },
+      };
+      return KD.logActivity(next, next.meta.currentUser || 'VJ', 'added task', trimmed);
+    });
+    setText('');
+  };
+  return (
+    <div className="va-sans" style={{
+      marginTop: 10, display: 'flex', gap: 6, alignItems: 'stretch',
+    }}>
+      <input
+        value={text} onChange={e => setText(e.target.value)}
+        onKeyDown={e => { if (e.key === 'Enter') submit(); }}
+        placeholder={`+ Quick add to ${lane}'s lane…`}
+        style={{
+          flex: 1, border: `1px dashed ${P.lineDashed}`, background: 'transparent',
+          color: P.ink, fontFamily: 'inherit', fontSize: 13,
+          padding: '8px 12px', borderRadius: 10, outline: 'none',
+        }}
+      />
+      <button onClick={onMore} title="More options" style={{
+        border: `1px dashed ${P.lineDashed}`, background: 'transparent',
+        color: P.dim, padding: '0 12px', borderRadius: 10, cursor: 'pointer',
+        fontSize: 14, fontFamily: 'inherit', fontWeight: 500,
+      }}>⋯</button>
     </div>
   );
 }
@@ -587,7 +695,7 @@ function AddLineDialog({ state, setState, onClose, categories }) {
         taskIds: newTaskId ? [newTaskId] : [],
       };
       next = { ...next, money: { ...next.money, lines: [...next.money.lines, newLine] } };
-      return next;
+      return KD.logActivity(next, next.meta.currentUser || 'VJ', 'added line', label.trim());
     });
     onClose();
   };
@@ -946,7 +1054,7 @@ function AddTaskDialog({ lane, state, setState, onClose, categories }) {
           },
         };
       }
-      return next;
+      return KD.logActivity(next, next.meta.currentUser || 'VJ', 'added task', text.trim());
     });
     onClose();
   };

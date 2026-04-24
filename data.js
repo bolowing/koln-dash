@@ -61,6 +61,7 @@
         'B.Sc. Finance and Management (3+1)',
         'B.Sc. International Business (3+1)',
       ],
+      currentUser: 'VJ',
     },
 
     money: {
@@ -80,11 +81,11 @@
     },
 
     categories: {
-      Documents: { color: '#2f7d5b', bg: '#e7f2ec' },
-      Financial: { color: '#8a5a2b', bg: '#f4ead9' },
-      Housing:   { color: '#7a4da8', bg: '#efe6f7' },
-      Banking:   { color: '#2b5a8a', bg: '#e1ecf7' },
-      Travel:    { color: '#a83d5a', bg: '#f7e1e8' },
+      Documents: { color: '#2f7d5b', bg: '#e7f2ec', emoji: '\u{1F4C4}' },
+      Financial: { color: '#8a5a2b', bg: '#f4ead9', emoji: '\u{1F4B8}' },
+      Housing:   { color: '#7a4da8', bg: '#efe6f7', emoji: '\u{1F3E0}' },
+      Banking:   { color: '#2b5a8a', bg: '#e1ecf7', emoji: '\u{1F3E6}' },
+      Travel:    { color: '#a83d5a', bg: '#f7e1e8', emoji: '✈️' },
     },
 
     lanes: {
@@ -122,6 +123,7 @@
 
     notes: {},
     checked: {},
+    activity: [],
   };
 
   const STORAGE_KEY = 'kd-state-v1';
@@ -132,12 +134,20 @@
         const raw = localStorage.getItem(STORAGE_KEY);
         if (raw) {
           const parsed = JSON.parse(raw);
+          // Deep-merge categories per-key so persisted categories from older
+          // state versions still pick up new fields (e.g. emoji).
+          const mergedCats = { ...DEFAULTS.categories };
+          for (const key of Object.keys(parsed.categories || {})) {
+            mergedCats[key] = { ...DEFAULTS.categories[key], ...parsed.categories[key] };
+          }
           return { ...DEFAULTS, ...parsed,
             meta:  { ...DEFAULTS.meta,  ...(parsed.meta||{}) },
             money: { ...DEFAULTS.money, ...(parsed.money||{}) },
             lanes: { ...DEFAULTS.lanes, ...(parsed.lanes||{}) },
+            categories: mergedCats,
             checked: parsed.checked || {},
             notes: parsed.notes || {},
+            activity: Array.isArray(parsed.activity) ? parsed.activity : [],
           };
         }
       } catch(e) {}
@@ -213,6 +223,42 @@
     return state.money.lines.filter(l => (l.taskIds || []).includes(taskId));
   }
 
+  // Splits text into strings and <a> elements for any http(s) URLs it contains.
+  // Returns an array suitable for rendering inside a React node.
+  const URL_REGEX = /\b(https?:\/\/[^\s<>"')]+)/g;
+  function linkify(text) {
+    if (!text) return text;
+    const parts = [];
+    let last = 0;
+    let match;
+    URL_REGEX.lastIndex = 0;
+    while ((match = URL_REGEX.exec(text)) !== null) {
+      if (match.index > last) parts.push(text.slice(last, match.index));
+      parts.push(React.createElement('a', {
+        key: 'u' + match.index,
+        href: match[1],
+        target: '_blank',
+        rel: 'noopener noreferrer',
+        style: { color: PALETTE.accent, textDecoration: 'underline' },
+        onClick: (e) => e.stopPropagation(),
+      }, match[1]));
+      last = match.index + match[1].length;
+    }
+    if (last < text.length) parts.push(text.slice(last));
+    return parts.length ? parts : text;
+  }
+
+  // Appends an activity entry; keeps the last 20. Call from setState callbacks.
+  function logActivity(s, author, verb, target) {
+    const entry = {
+      id: 'a' + Date.now() + Math.random().toString(36).slice(2, 6),
+      at: new Date().toISOString(),
+      author, verb, target,
+    };
+    const prev = Array.isArray(s.activity) ? s.activity : [];
+    return { ...s, activity: [entry, ...prev].slice(0, 20) };
+  }
+
   // Pulls fresh EUR→USD / EUR→IDR from open.er-api.com and merges into state.
   // Returns 'ok' | 'failed' | 'offline' so the caller can render a status label.
   async function refreshExchangeRates(setState) {
@@ -243,7 +289,7 @@
     daysUntil, formatEUR, formatUSD, computeProgress,
     progressByCategory, laneProgress, moneyTotals,
     linkedTasks, linkedLines,
-    refreshExchangeRates,
+    refreshExchangeRates, linkify, logActivity,
     statusOptions: STATUS_OPTIONS,
     urgencyOptions: URGENCY_OPTIONS,
     statusColor: STATUS_COLOR,
