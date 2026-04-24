@@ -9,10 +9,112 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
 <style>
   html, body, #root { margin: 0; padding: 0; }
+  html { -webkit-text-size-adjust: 100%; }
   body { background: #e6dfd2; font-family: 'Inter', sans-serif; }
   * { box-sizing: border-box; }
   #root { min-height: 100vh; }
   .v1-wrap { max-width: 1240px; margin: 0 auto; }
+
+  @media (max-width: 720px) {
+    /* Prevent iOS auto-zoom on focus by enforcing 16px min on inputs.
+       Exclude large display inputs (e.g. FX calculator) via .v1-large-input. */
+    input:not(.v1-large-input), textarea, select { font-size: 16px !important; }
+    body { overflow-x: hidden; }
+
+    .v1-root { padding: 20px 16px 40px !important; }
+
+    /* Masthead stacks vertically */
+    .v1-masthead {
+      flex-direction: column !important;
+      align-items: flex-start !important;
+      gap: 12px;
+      padding-bottom: 16px !important;
+      margin-bottom: 20px !important;
+    }
+    .v1-h1 { font-size: 34px !important; letter-spacing: -0.5px !important; }
+    .v1-masthead-right { text-align: left !important; }
+
+    /* Multi-column grids collapse to single column */
+    .v1-hero-row,
+    .v1-money-stats,
+    .v1-tasks-grid,
+    .v1-readiness-grid {
+      grid-template-columns: 1fr !important;
+      gap: 12px !important;
+    }
+
+    /* Tighter section spacing */
+    .v1-hero-row { margin-bottom: 20px !important; }
+    .v1-section-h2 { font-size: 24px !important; }
+
+    /* Days-until card: scale down from 120px */
+    .v1-days-num { font-size: 72px !important; letter-spacing: -2px !important; flex-wrap: wrap; }
+    .v1-days-card,
+    .v1-ring-card,
+    .v1-fx-card { padding: 18px 20px !important; }
+
+    /* Money card inner padding */
+    .v1-money-card { padding: 18px !important; }
+    .v1-money-stats { gap: 14px !important; }
+
+    /* Tasks header: stack h2+subtext above filter pills */
+    .v1-tasks-head {
+      flex-direction: column !important;
+      align-items: stretch !important;
+      gap: 10px !important;
+    }
+    .v1-tasks-head > div { flex-wrap: wrap; }
+    .v1-tab-btn {
+      padding: 8px 16px !important;
+      font-size: 13px !important;
+      min-height: 36px;
+    }
+
+    /* Timeline row: let chip wrap below the text */
+    .v1-timeline-row {
+      display: flex !important;
+      flex-wrap: wrap;
+      gap: 4px 10px !important;
+      padding-left: 30px !important;
+      grid-template-columns: none !important;
+      align-items: baseline;
+    }
+    .v1-timeline-when { flex: 0 0 auto; }
+    .v1-timeline-what { flex: 1 1 60%; min-width: 0; }
+
+    /* Hide uppercase status label next to the dot to save line width */
+    .v1-status-label { display: none !important; }
+
+    /* Footer stacks */
+    .v1-foot {
+      flex-direction: column !important;
+      align-items: flex-start !important;
+      gap: 10px;
+    }
+
+    /* Task drawer / line drawer / dialogs fill the screen */
+    .v1-drawer {
+      width: 100% !important;
+      max-width: 100% !important;
+      padding: 18px 18px calc(18px + env(safe-area-inset-bottom)) !important;
+      -webkit-overflow-scrolling: touch;
+    }
+    .v1-dialog {
+      width: 100% !important;
+      max-width: 100% !important;
+      max-height: calc(100dvh - 24px);
+      overflow-y: auto;
+      padding: 18px !important;
+      border-radius: 14px !important;
+    }
+
+    /* Larger checkbox tap target on task rows */
+    .v1-task-row { grid-template-columns: 28px 1fr auto !important; }
+    .v1-task-check { width: 24px !important; height: 24px !important; margin-top: 0 !important; }
+
+    /* EditableNumber input shouldn't force 140px on tight cells */
+    .v1-editable-input { width: 100% !important; max-width: 140px; }
+  }
 </style>
 <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" crossorigin="anonymous"></script>
 <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" crossorigin="anonymous"></script>
