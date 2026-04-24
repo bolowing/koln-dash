@@ -295,7 +295,7 @@ function FundingProgress({ sentEUR, totalEUR }) {
         fontSize: 10, letterSpacing: 2, textTransform: 'uppercase',
         marginTop: 8,
       }}>
-        <span style={{ color: P.dim }}>New York</span>
+        <span style={{ color: P.dim }}>Jakarta, Indonesia</span>
         <span style={{ color: P.accent, fontWeight: 600 }}>Köln →</span>
       </div>
     </div>

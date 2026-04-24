@@ -160,6 +160,17 @@ function VariationA({ onReset }) {
             <div className="va-sans" style={{ fontSize: 12, color: P.dim, marginTop: 2 }}>
               across {Object.keys(cats).length} categories
             </div>
+            <div className="va-sans" style={{
+              fontSize: 12, color: P.ink, marginTop: 10,
+              paddingTop: 10, borderTop: '1px dashed rgba(24,20,15,0.12)',
+              lineHeight: 1.4,
+            }}>
+              <span className="va-mono" style={{
+                fontSize: 9, letterSpacing: 2, textTransform: 'uppercase',
+                color: P.accent, display: 'block', marginBottom: 3,
+              }}>Current status</span>
+              Waiting on a reply from JIS about the transcripts
+            </div>
           </div>
         </div>
 
