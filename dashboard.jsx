@@ -126,7 +126,7 @@ function VariationA({ onReset }) {
 
       {/* Hero row */}
       <section className="v1-hero-row" style={{
-        display: 'grid', gridTemplateColumns: '1.1fr 1fr 1.2fr',
+        display: 'grid', gridTemplateColumns: '1.1fr 1.2fr',
         gap: 18, marginBottom: 28,
       }}>
         <div className="v1-days-card" style={{
@@ -138,48 +138,21 @@ function VariationA({ onReset }) {
             fontSize: 10, letterSpacing: 2, textTransform: 'uppercase', opacity: 0.6,
           }}>Days until departure</div>
           <div className="v1-days-num" style={{
-            fontSize: 120, fontWeight: 400, lineHeight: 1, letterSpacing: -4,
-            marginTop: 6, display: 'flex', alignItems: 'baseline', gap: 14,
+            fontSize: 76, fontWeight: 500, lineHeight: 1, letterSpacing: -2,
+            marginTop: 4, display: 'flex', alignItems: 'baseline', gap: 12,
           }}>
             {days}
             <span className="va-sans" style={{
-              fontSize: 12, opacity: 0.6, fontWeight: 400,
+              fontSize: 12, opacity: 0.65, fontWeight: 400,
               letterSpacing: 0,
-            }}>Target · {targetDate}</span>
+            }}>days</span>
           </div>
           <div className="va-sans" style={{
             fontSize: 12, marginTop: 4, opacity: 0.7,
+            display: 'flex', justifyContent: 'space-between', gap: 12,
           }}>
-            ≈ {Math.round(days/7)} weeks · {Math.round(days/30)} months
-          </div>
-        </div>
-
-        <div className="v1-ring-card" style={{
-          background: P.card, borderRadius: 18, padding: '22px 24px',
-          display: 'flex', alignItems: 'center', gap: 18,
-        }}>
-          <RingProgress pct={progress.pct} size={92} stroke={8} color="#9b4722"/>
-          <div>
-            <div className="va-mono" style={{
-              fontSize: 10, letterSpacing: 2, textTransform: 'uppercase', color: P.accent,
-            }}>Prep complete</div>
-            <div className="va-sans" style={{ fontSize: 22, fontWeight: 500, marginTop: 4, lineHeight: 1.2 }}>
-              {progress.done} of {progress.total} tasks
-            </div>
-            <div className="va-sans" style={{ fontSize: 12, color: P.dim, marginTop: 2 }}>
-              across {Object.keys(cats).length} categories
-            </div>
-            <div className="va-sans" style={{
-              fontSize: 12, color: P.ink, marginTop: 10,
-              paddingTop: 10, borderTop: '1px dashed rgba(24,20,15,0.12)',
-              lineHeight: 1.4,
-            }}>
-              <span className="va-mono" style={{
-                fontSize: 9, letterSpacing: 2, textTransform: 'uppercase',
-                color: P.accent, display: 'block', marginBottom: 3,
-              }}>Current status</span>
-              Waiting on a reply from JIS about the transcripts
-            </div>
+            <span>Target · {targetDate}</span>
+            <span style={{ opacity: 0.8 }}>≈ {Math.round(days/7)} weeks</span>
           </div>
         </div>
 
@@ -202,24 +175,40 @@ function VariationA({ onReset }) {
         }}>
           <OverallProgress state={state}/>
 
-          <div className="v1-money-stats" style={{
-            display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 36,
-            paddingTop: 2,
+          <div className="va-sans" style={{
+            display: 'flex', flexDirection: 'column', gap: 2, paddingTop: 4,
           }}>
-            <MoneyStat label="Tasks done" value={
-              <>{progress.done}<span className="va-sans" style={{ fontSize: 13, color: P.dim }}> / {progress.total}</span></>
-            } sub={`${Object.keys(cats).length} categories · ${progress.pct}% overall`}/>
-            <MoneyStat label="ASAP left" value={
-              (() => {
-                const n = [...state.lanes.VJ, ...state.lanes.Jul].filter(t => t.urgency === 'asap' && !state.checked[t.id]).length;
-                return <>{n}<span className="va-sans" style={{ fontSize: 13, color: P.dim }}> task{n===1?'':'s'}</span></>;
-              })()
-            } sub="Red-flag items still open"/>
-            <MoneyStat label="Next milestone" value={
-              <span style={{ fontSize: 22, letterSpacing: 0 }}>
-                {state.upcoming[0]?.what || '—'}
-              </span>
-            } sub={state.upcoming[0] ? `${state.upcoming[0].when} · ${state.upcoming[0].cat}` : ''}/>
+            {Object.entries(byCat).map(([cat, d]) => {
+              const c = cats[cat] || { color: P.dim, bg: P.lineSoft, emoji: '' };
+              return (
+                <div key={cat} style={{
+                  display: 'grid',
+                  gridTemplateColumns: '18px minmax(90px, auto) 1fr 48px 32px',
+                  gap: 12, alignItems: 'center',
+                  padding: '8px 2px',
+                  borderTop: `1px solid ${P.lineSoft}`,
+                  fontSize: 12.5,
+                }}>
+                  <span aria-hidden="true" style={{ fontSize: 13, opacity: 0.75 }}>{c.emoji}</span>
+                  <span style={{ color: P.ink, fontWeight: 500 }}>{cat}</span>
+                  <span style={{ color: P.dim, fontSize: 11, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {d.next === 'All done ✓' ? 'All done' : `Next: ${d.next}`}
+                  </span>
+                  <div style={{
+                    height: 4, background: P.lineSoft, borderRadius: 999, overflow: 'hidden',
+                  }}>
+                    <div style={{
+                      width: `${d.pct}%`, height: '100%',
+                      background: c.color, borderRadius: 999,
+                      transition: 'width .4s ease',
+                    }}/>
+                  </div>
+                  <span className="va-mono" style={{
+                    fontSize: 10, color: P.dim, textAlign: 'right', letterSpacing: 0.5,
+                  }}>{d.done}/{d.total}</span>
+                </div>
+              );
+            })}
           </div>
         </div>
       </section>
@@ -405,78 +394,39 @@ function VariationA({ onReset }) {
         </div>
       </section>
 
-      {/* Readiness */}
+      {/* What's ahead — timeline only */}
       <section style={{ marginBottom: 12 }}>
         <div style={{ display: 'flex', alignItems: 'baseline', flexWrap: 'wrap', gap: 14, marginBottom: 14 }}>
-          <h2 className="v1-section-h2" style={{ fontSize: 30, fontWeight: 400, margin: 0, letterSpacing: -0.5 }}>Readiness</h2>
-          <span className="va-sans" style={{ fontSize: 12, color: P.dim }}>Readiness by category + timeline</span>
+          <h2 className="v1-section-h2" style={{ fontSize: 30, fontWeight: 400, margin: 0, letterSpacing: -0.5 }}>What's ahead</h2>
+          <span className="va-sans" style={{ fontSize: 12, color: P.dim }}>Milestones between here and Köln</span>
         </div>
 
-        <div className="v1-readiness-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1.6fr', gap: 18 }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {Object.entries(byCat).map(([cat, d]) => (
-              <div key={cat} style={{
-                background: P.card, borderRadius: 14, padding: '14px 16px',
-                display: 'grid', gridTemplateColumns: '1fr auto', gap: 10,
+        <div style={{
+          background: P.card, borderRadius: 18, padding: '22px 24px',
+          position: 'relative',
+        }}>
+          <div style={{ position: 'relative', paddingLeft: 4 }}>
+            <div style={{
+              position: 'absolute', left: 14, top: 10, bottom: 10, width: 2,
+              background: 'linear-gradient(#f4e0cb, #c14a1c 30%, #1a120a)',
+            }}/>
+            {state.upcoming.map((u, i) => (
+              <div key={i} className="va-sans v1-timeline-row" style={{
+                position: 'relative', paddingLeft: 36, marginBottom: 14,
+                display: 'grid', gridTemplateColumns: '60px 1fr auto', gap: 12,
+                alignItems: 'center',
               }}>
-                <div>
-                  <div className="va-sans" style={{
-                    fontSize: 13, fontWeight: 600, color: cats[cat].color,
-                    display: 'flex', alignItems: 'center', gap: 8,
-                  }}>
-                    <span style={{
-                      display: 'inline-block', width: 8, height: 8, borderRadius: 2,
-                      background: cats[cat].color,
-                    }}/>
-                    {cat}
-                  </div>
-                  <div className="va-sans" style={{ fontSize: 11, color: P.dim, marginTop: 6 }}>
-                    Next: {d.next}
-                  </div>
-                </div>
-                <div style={{ textAlign: 'right' }}>
-                  <div className="va-sans" style={{ fontSize: 22, fontWeight: 500, color: P.ink, lineHeight: 1 }}>
-                    {d.pct}%
-                  </div>
-                  <div className="va-sans" style={{ fontSize: 10, color: P.dim }}>
-                    {d.done}/{d.total}
-                  </div>
-                </div>
+                <div style={{
+                  position: 'absolute', left: 8, top: 6, width: 14, height: 14,
+                  borderRadius: '50%',
+                  background: i === state.upcoming.length - 1 ? P.ink : P.card,
+                  border: '2px solid ' + (i === state.upcoming.length - 1 ? P.ink : P.accent),
+                }}/>
+                <div className="v1-timeline-when" style={{ fontSize: 11, color: P.accent, fontWeight: 600, letterSpacing: 0.5 }}>{u.when}</div>
+                <div className="v1-timeline-what" style={{ fontSize: 13, color: P.ink, fontWeight: 500 }}>{u.what}</div>
+                <CategoryChip cat={u.cat} categories={cats}/>
               </div>
             ))}
-          </div>
-
-          <div style={{
-            background: P.card, borderRadius: 18, padding: '22px 24px',
-            position: 'relative',
-          }}>
-            <div className="va-mono" style={{
-              fontSize: 10, letterSpacing: 2, textTransform: 'uppercase',
-              color: P.accent, marginBottom: 14,
-            }}>Timeline · what's next</div>
-            <div style={{ position: 'relative', paddingLeft: 4 }}>
-              <div style={{
-                position: 'absolute', left: 14, top: 10, bottom: 10, width: 2,
-                background: 'linear-gradient(#f4e0cb, #c14a1c 30%, #1a120a)',
-              }}/>
-              {state.upcoming.map((u, i) => (
-                <div key={i} className="va-sans v1-timeline-row" style={{
-                  position: 'relative', paddingLeft: 36, marginBottom: 14,
-                  display: 'grid', gridTemplateColumns: '60px 1fr auto', gap: 12,
-                  alignItems: 'center',
-                }}>
-                  <div style={{
-                    position: 'absolute', left: 8, top: 6, width: 14, height: 14,
-                    borderRadius: '50%',
-                    background: i === state.upcoming.length - 1 ? P.ink : P.card,
-                    border: '2px solid ' + (i === state.upcoming.length - 1 ? P.ink : P.accent),
-                  }}/>
-                  <div className="v1-timeline-when" style={{ fontSize: 11, color: P.accent, fontWeight: 600, letterSpacing: 0.5 }}>{u.when}</div>
-                  <div className="v1-timeline-what" style={{ fontSize: 13, color: P.ink, fontWeight: 500 }}>{u.what}</div>
-                  <CategoryChip cat={u.cat} categories={cats}/>
-                </div>
-              ))}
-            </div>
           </div>
         </div>
       </section>
