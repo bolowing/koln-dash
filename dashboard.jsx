@@ -10,6 +10,10 @@ function VariationA({ onReset }) {
   const [showAddLine, setShowAddLine] = React.useState(false);
   const [addTaskLane, setAddTaskLane] = React.useState(null);
   const [tab, setTab] = React.useState('all');
+  const [catFilter, setCatFilter] = React.useState(null);
+  const [collapsedGroups, setCollapsedGroups] = React.useState({});
+  const toggleGroup = (key, currentlyCollapsed) =>
+    setCollapsedGroups(s => ({ ...s, [key]: !currentlyCollapsed }));
 
   const progress = KD.computeProgress(state);
   const byCat    = KD.progressByCategory(state);
@@ -46,16 +50,21 @@ function VariationA({ onReset }) {
 
   return (
     <div className="v1-root" style={{
-      fontFamily: '"Instrument Serif", Georgia, serif',
+      fontFamily: "'Figtree', -apple-system, 'Segoe UI', sans-serif",
       background: P.paper,
       color: P.ink,
       minHeight: '100%',
       padding: '36px 40px 60px',
       position: 'relative',
+      fontFeatureSettings: "'ss01', 'cv11'",
     }}>
       <style>{`
-        .va-sans { font-family: 'Inter', -apple-system, 'Segoe UI', sans-serif; }
+        .va-sans { font-family: 'Figtree', -apple-system, 'Segoe UI', sans-serif; }
         .va-mono { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+        .v1-display,
+        .v1-h1,
+        .v1-section-h2,
+        .v1-days-num { font-family: 'Bricolage Grotesque', system-ui, sans-serif; font-optical-sizing: auto; }
         .v1-hero-row > * { min-width: 0; }
       `}</style>
 
@@ -71,10 +80,10 @@ function VariationA({ onReset }) {
             color: P.accent, marginBottom: 4,
           }}>Study abroad · {new Date().toLocaleDateString('en-US', { weekday: 'long' })}</div>
           <h1 className="v1-h1" style={{
-            fontSize: 56, fontWeight: 400, lineHeight: 1,
-            margin: 0, letterSpacing: -1,
+            fontSize: 56, fontWeight: 500, lineHeight: 1,
+            margin: 0, letterSpacing: -1.4,
           }}>
-            Study abroad in <em style={{ color: P.accent, fontStyle: 'italic' }}>Köln</em>
+            Study abroad in <em style={{ color: P.accent, fontStyle: 'italic', fontWeight: 500 }}>Köln</em>
           </h1>
           <div className="va-sans" style={{
             fontSize: 13, color: P.dimStrong, marginTop: 8,
@@ -93,7 +102,7 @@ function VariationA({ onReset }) {
                 <React.Fragment key={i}>
                   {i > 0 && <span style={{ fontSize: 11, color: P.dimSoft, fontStyle: 'italic' }}>or</span>}
                   <span style={{
-                    fontSize: 11, color: '#8a5a2b', background: '#f4ead9',
+                    fontSize: 11, color: P.accent, background: P.accentSoft,
                     padding: '3px 9px', borderRadius: 4, fontWeight: 600,
                   }}>{d}</span>
                 </React.Fragment>
@@ -117,7 +126,7 @@ function VariationA({ onReset }) {
 
       {/* Hero row */}
       <section className="v1-hero-row" style={{
-        display: 'grid', gridTemplateColumns: '1.1fr 1fr 1.2fr',
+        display: 'grid', gridTemplateColumns: '1.1fr 1.2fr',
         gap: 18, marginBottom: 28,
       }}>
         <div className="v1-days-card" style={{
@@ -129,60 +138,87 @@ function VariationA({ onReset }) {
             fontSize: 10, letterSpacing: 2, textTransform: 'uppercase', opacity: 0.6,
           }}>Days until departure</div>
           <div className="v1-days-num" style={{
-            fontSize: 120, fontWeight: 400, lineHeight: 1, letterSpacing: -4,
-            marginTop: 6, display: 'flex', alignItems: 'baseline', gap: 14,
+            fontSize: 76, fontWeight: 500, lineHeight: 1, letterSpacing: -2,
+            marginTop: 4, display: 'flex', alignItems: 'baseline', gap: 12,
           }}>
             {days}
             <span className="va-sans" style={{
-              fontSize: 12, opacity: 0.6, fontWeight: 400,
+              fontSize: 12, opacity: 0.65, fontWeight: 400,
               letterSpacing: 0,
-            }}>Target · {targetDate}</span>
+            }}>days</span>
           </div>
           <div className="va-sans" style={{
             fontSize: 12, marginTop: 4, opacity: 0.7,
+            display: 'flex', justifyContent: 'space-between', gap: 12,
           }}>
-            ≈ {Math.round(days/7)} weeks · {Math.round(days/30)} months
-          </div>
-        </div>
-
-        <div className="v1-ring-card" style={{
-          background: P.card, borderRadius: 18, padding: '22px 24px',
-          display: 'flex', alignItems: 'center', gap: 18,
-        }}>
-          <RingProgress pct={progress.pct} size={92} stroke={8} color="#9b4722"/>
-          <div>
-            <div className="va-mono" style={{
-              fontSize: 10, letterSpacing: 2, textTransform: 'uppercase', color: P.accent,
-            }}>Prep complete</div>
-            <div className="va-sans" style={{ fontSize: 22, fontWeight: 500, marginTop: 4, lineHeight: 1.2 }}>
-              {progress.done} of {progress.total} tasks
-            </div>
-            <div className="va-sans" style={{ fontSize: 12, color: P.dim, marginTop: 2 }}>
-              across {Object.keys(cats).length} categories
-            </div>
-            <div className="va-sans" style={{
-              fontSize: 12, color: P.ink, marginTop: 10,
-              paddingTop: 10, borderTop: '1px dashed rgba(24,20,15,0.12)',
-              lineHeight: 1.4,
-            }}>
-              <span className="va-mono" style={{
-                fontSize: 9, letterSpacing: 2, textTransform: 'uppercase',
-                color: P.accent, display: 'block', marginBottom: 3,
-              }}>Current status</span>
-              Waiting on a reply from JIS about the transcripts
-            </div>
+            <span>Target · {targetDate}</span>
+            <span style={{ opacity: 0.8 }}>≈ {Math.round(days/7)} weeks</span>
           </div>
         </div>
 
         <FxCalculator state={state} setState={setState}/>
       </section>
 
-      {/* Money */}
+      {/* Progress — the hero narrative: tasks done, Bavarian dude + advice */}
       <section style={{ marginBottom: 28 }}>
         <div style={{
           display: 'flex', alignItems: 'baseline', flexWrap: 'wrap', gap: 14, marginBottom: 14,
         }}>
-          <h2 className="v1-section-h2" style={{ fontSize: 30, fontWeight: 400, margin: 0, letterSpacing: -0.5 }}>Money</h2>
+          <h2 className="v1-section-h2" style={{ fontSize: 30, fontWeight: 400, margin: 0, letterSpacing: -0.5 }}>Progress</h2>
+          <span className="va-sans" style={{ fontSize: 12, color: P.dim }}>
+            How close we are — with commentary from the lederhosen department
+          </span>
+        </div>
+
+        <div className="v1-progress-card" style={{
+          background: P.card, borderRadius: 18, padding: '24px 26px',
+        }}>
+          <OverallProgress state={state}/>
+
+          <div className="va-sans" style={{
+            display: 'flex', flexDirection: 'column', gap: 2, paddingTop: 4,
+          }}>
+            {Object.entries(byCat).map(([cat, d]) => {
+              const c = cats[cat] || { color: P.dim, bg: P.lineSoft, emoji: '' };
+              return (
+                <div key={cat} style={{
+                  display: 'grid',
+                  gridTemplateColumns: '18px minmax(90px, auto) 1fr 48px 32px',
+                  gap: 12, alignItems: 'center',
+                  padding: '8px 2px',
+                  borderTop: `1px solid ${P.lineSoft}`,
+                  fontSize: 12.5,
+                }}>
+                  <span aria-hidden="true" style={{ fontSize: 13, opacity: 0.75 }}>{c.emoji}</span>
+                  <span style={{ color: P.ink, fontWeight: 500 }}>{cat}</span>
+                  <span style={{ color: P.dim, fontSize: 11, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {d.next === 'All done ✓' ? 'All done' : `Next: ${d.next}`}
+                  </span>
+                  <div style={{
+                    height: 4, background: P.lineSoft, borderRadius: 999, overflow: 'hidden',
+                  }}>
+                    <div style={{
+                      width: `${d.pct}%`, height: '100%',
+                      background: c.color, borderRadius: 999,
+                      transition: 'width .4s ease',
+                    }}/>
+                  </div>
+                  <span className="va-mono" style={{
+                    fontSize: 10, color: P.dim, textAlign: 'right', letterSpacing: 0.5,
+                  }}>{d.done}/{d.total}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* Money movement — demoted but still full-featured */}
+      <section style={{ marginBottom: 28 }}>
+        <div style={{
+          display: 'flex', alignItems: 'baseline', flexWrap: 'wrap', gap: 14, marginBottom: 14,
+        }}>
+          <h2 className="v1-section-h2" style={{ fontSize: 22, fontWeight: 400, margin: 0, letterSpacing: -0.3 }}>Money movement</h2>
           <span className="va-sans" style={{ fontSize: 12, color: P.dim }}>
             Total budget + what's moved so far
           </span>
@@ -236,7 +272,7 @@ function VariationA({ onReset }) {
                     {line.label}
                     {(line.taskIds || []).length > 0 && (
                       <span title={(line.taskIds || []).length + ' linked task(s)'} style={{
-                        fontSize: 10, color: P.accent, background: '#f4ead9',
+                        fontSize: 10, color: P.accent, background: P.accentSoft,
                         padding: '1px 6px', borderRadius: 4, fontWeight: 600,
                       }}>↳ {(line.taskIds || []).length}</span>
                     )}
@@ -283,11 +319,59 @@ function VariationA({ onReset }) {
           </div>
         </div>
 
+        {/* Category filter chips — click one to narrow, click again to clear */}
+        <div className="va-sans" style={{
+          display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 14,
+          alignItems: 'center',
+        }}>
+          <span className="va-mono" style={{
+            fontSize: 10, letterSpacing: 2, textTransform: 'uppercase',
+            color: P.dim, fontWeight: 600, marginRight: 4,
+          }}>Filter</span>
+          {Object.entries(cats).map(([cat, c]) => {
+            const all = [...state.lanes.VJ, ...state.lanes.Jul].filter(t => t.cat === cat);
+            const done = all.filter(t => state.checked[t.id]).length;
+            const active = catFilter === cat;
+            const complete = all.length > 0 && done === all.length;
+            return (
+              <button key={cat} onClick={() => setCatFilter(active ? null : cat)} style={{
+                border: active ? `1.5px solid ${c.color}` : `1px solid ${P.line}`,
+                background: active ? c.bg : (complete ? 'transparent' : P.card),
+                color: active ? c.color : P.dimStrong,
+                padding: '4px 10px', borderRadius: 999, fontSize: 11.5,
+                cursor: 'pointer', fontWeight: 600, fontFamily: 'inherit',
+                display: 'flex', alignItems: 'center', gap: 6,
+                opacity: complete && !active ? 0.55 : 1,
+                transition: 'all .12s',
+              }}>
+                <span aria-hidden="true">{c.emoji}</span>
+                <span>{cat}</span>
+                <span className="va-mono" style={{
+                  fontSize: 10, fontWeight: 500,
+                  color: active ? c.color : P.dim,
+                  letterSpacing: 0.5,
+                }}>{done}/{all.length}</span>
+              </button>
+            );
+          })}
+          {catFilter && (
+            <button onClick={() => setCatFilter(null)} style={{
+              border: 'none', background: 'transparent',
+              color: P.accent, padding: '4px 6px', fontSize: 11,
+              cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600,
+              textDecoration: 'underline',
+            }}>Clear</button>
+          )}
+        </div>
+
         <div className="v1-tasks-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }}>
           <Lane
             title="VJ's lane" lane="VJ"
             visible={tab === 'all' || tab === 'asap' || tab === 'mine'}
             filterASAP={tab === 'asap'}
+            catFilter={catFilter}
+            collapsedGroups={collapsedGroups}
+            onToggleGroup={toggleGroup}
             state={state} setState={setState}
             onOpen={(t) => setOpenTask({ task: t, lane: 'VJ' })}
             onAdd={() => addTask('VJ')}
@@ -298,6 +382,9 @@ function VariationA({ onReset }) {
             title="Jul's lane" lane="Jul"
             visible={tab === 'all' || tab === 'asap' || tab === 'jul'}
             filterASAP={tab === 'asap'}
+            catFilter={catFilter}
+            collapsedGroups={collapsedGroups}
+            onToggleGroup={toggleGroup}
             state={state} setState={setState}
             onOpen={(t) => setOpenTask({ task: t, lane: 'Jul' })}
             onAdd={() => addTask('Jul')}
@@ -307,78 +394,39 @@ function VariationA({ onReset }) {
         </div>
       </section>
 
-      {/* Readiness */}
+      {/* What's ahead — timeline only */}
       <section style={{ marginBottom: 12 }}>
         <div style={{ display: 'flex', alignItems: 'baseline', flexWrap: 'wrap', gap: 14, marginBottom: 14 }}>
-          <h2 className="v1-section-h2" style={{ fontSize: 30, fontWeight: 400, margin: 0, letterSpacing: -0.5 }}>Readiness</h2>
-          <span className="va-sans" style={{ fontSize: 12, color: P.dim }}>Readiness by category + timeline</span>
+          <h2 className="v1-section-h2" style={{ fontSize: 30, fontWeight: 400, margin: 0, letterSpacing: -0.5 }}>What's ahead</h2>
+          <span className="va-sans" style={{ fontSize: 12, color: P.dim }}>Milestones between here and Köln</span>
         </div>
 
-        <div className="v1-readiness-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1.6fr', gap: 18 }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {Object.entries(byCat).map(([cat, d]) => (
-              <div key={cat} style={{
-                background: P.card, borderRadius: 14, padding: '14px 16px',
-                display: 'grid', gridTemplateColumns: '1fr auto', gap: 10,
+        <div style={{
+          background: P.card, borderRadius: 18, padding: '22px 24px',
+          position: 'relative',
+        }}>
+          <div style={{ position: 'relative', paddingLeft: 4 }}>
+            <div style={{
+              position: 'absolute', left: 14, top: 10, bottom: 10, width: 2,
+              background: 'linear-gradient(#f4e0cb, #c14a1c 30%, #1a120a)',
+            }}/>
+            {state.upcoming.map((u, i) => (
+              <div key={i} className="va-sans v1-timeline-row" style={{
+                position: 'relative', paddingLeft: 36, marginBottom: 14,
+                display: 'grid', gridTemplateColumns: '60px 1fr auto', gap: 12,
+                alignItems: 'center',
               }}>
-                <div>
-                  <div className="va-sans" style={{
-                    fontSize: 13, fontWeight: 600, color: cats[cat].color,
-                    display: 'flex', alignItems: 'center', gap: 8,
-                  }}>
-                    <span style={{
-                      display: 'inline-block', width: 8, height: 8, borderRadius: 2,
-                      background: cats[cat].color,
-                    }}/>
-                    {cat}
-                  </div>
-                  <div className="va-sans" style={{ fontSize: 11, color: P.dim, marginTop: 6 }}>
-                    Next: {d.next}
-                  </div>
-                </div>
-                <div style={{ textAlign: 'right' }}>
-                  <div className="va-sans" style={{ fontSize: 22, fontWeight: 500, color: P.ink, lineHeight: 1 }}>
-                    {d.pct}%
-                  </div>
-                  <div className="va-sans" style={{ fontSize: 10, color: P.dim }}>
-                    {d.done}/{d.total}
-                  </div>
-                </div>
+                <div style={{
+                  position: 'absolute', left: 8, top: 6, width: 14, height: 14,
+                  borderRadius: '50%',
+                  background: i === state.upcoming.length - 1 ? P.ink : P.card,
+                  border: '2px solid ' + (i === state.upcoming.length - 1 ? P.ink : P.accent),
+                }}/>
+                <div className="v1-timeline-when" style={{ fontSize: 11, color: P.accent, fontWeight: 600, letterSpacing: 0.5 }}>{u.when}</div>
+                <div className="v1-timeline-what" style={{ fontSize: 13, color: P.ink, fontWeight: 500 }}>{u.what}</div>
+                <CategoryChip cat={u.cat} categories={cats}/>
               </div>
             ))}
-          </div>
-
-          <div style={{
-            background: P.card, borderRadius: 18, padding: '22px 24px',
-            position: 'relative',
-          }}>
-            <div className="va-mono" style={{
-              fontSize: 10, letterSpacing: 2, textTransform: 'uppercase',
-              color: P.accent, marginBottom: 14,
-            }}>Timeline · what's next</div>
-            <div style={{ position: 'relative', paddingLeft: 4 }}>
-              <div style={{
-                position: 'absolute', left: 14, top: 10, bottom: 10, width: 2,
-                background: 'linear-gradient(#e8dfd3, #9b4722 30%, #1d1a15)',
-              }}/>
-              {state.upcoming.map((u, i) => (
-                <div key={i} className="va-sans v1-timeline-row" style={{
-                  position: 'relative', paddingLeft: 36, marginBottom: 14,
-                  display: 'grid', gridTemplateColumns: '60px 1fr auto', gap: 12,
-                  alignItems: 'center',
-                }}>
-                  <div style={{
-                    position: 'absolute', left: 8, top: 6, width: 14, height: 14,
-                    borderRadius: '50%',
-                    background: i === state.upcoming.length - 1 ? P.ink : P.card,
-                    border: '2px solid ' + (i === state.upcoming.length - 1 ? P.ink : P.accent),
-                  }}/>
-                  <div className="v1-timeline-when" style={{ fontSize: 11, color: P.accent, fontWeight: 600, letterSpacing: 0.5 }}>{u.when}</div>
-                  <div className="v1-timeline-what" style={{ fontSize: 13, color: P.ink, fontWeight: 500 }}>{u.what}</div>
-                  <CategoryChip cat={u.cat} categories={cats}/>
-                </div>
-              ))}
-            </div>
           </div>
         </div>
       </section>
@@ -503,7 +551,7 @@ function MoneyStat({ label, value, sub }) {
       <div className="va-mono" style={{
         fontSize: 10, letterSpacing: 2, textTransform: 'uppercase', color: P.dim,
       }}>{label}</div>
-      <div style={{ fontSize: 36, fontWeight: 400, letterSpacing: -0.5, lineHeight: 1.1, marginTop: 6 }}>
+      <div className="v1-display" style={{ fontSize: 36, fontWeight: 500, letterSpacing: 0, lineHeight: 1.1, marginTop: 6 }}>
         {value}
       </div>
       <div className="va-sans" style={{ fontSize: 11, color: P.dim, marginTop: 4 }}>{sub}</div>
@@ -524,11 +572,25 @@ function StatusDot({ status }) {
   );
 }
 
-function Lane({ title, lane, visible, filterASAP, state, setState, onOpen, onAdd, onToggle, categories }) {
+function Lane({ title, lane, visible, filterASAP, catFilter, collapsedGroups, onToggleGroup, state, setState, onOpen, onAdd, onToggle, categories }) {
   if (!visible) return <div/>;
   const lp = KD.laneProgress(state, lane);
   let tasks = state.lanes[lane];
   if (filterASAP) tasks = tasks.filter(t => t.urgency === 'asap');
+  if (catFilter) tasks = tasks.filter(t => t.cat === catFilter);
+
+  // Group tasks by category, preserving the ordering in `categories`. Unknown
+  // categories get appended at the end under their own group so nothing falls
+  // off the list.
+  const catOrder = Object.keys(categories);
+  const grouped = {};
+  for (const t of tasks) {
+    (grouped[t.cat] = grouped[t.cat] || []).push(t);
+  }
+  const orderedCats = [
+    ...catOrder.filter(c => grouped[c]),
+    ...Object.keys(grouped).filter(c => !catOrder.includes(c)),
+  ];
 
   return (
     <div style={{
@@ -541,24 +603,72 @@ function Lane({ title, lane, visible, filterASAP, state, setState, onOpen, onAdd
       }}>
         <div style={{
           fontSize: 20, fontWeight: 400, letterSpacing: -0.3,
-          fontFamily: '"Instrument Serif", Georgia, serif',
+          fontFamily: "'Bricolage Grotesque', system-ui, sans-serif",
         }}>{title}</div>
         <div className="va-sans" style={{ fontSize: 12, color: P.dim }}>
           <strong style={{ color: P.ink, fontWeight: 600 }}>{lp.done}</strong> / {lp.total}
         </div>
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column' }}>
-        {tasks.map(t => (
-          <TaskRow key={t.id} t={t} lane={lane}
-            checked={!!state.checked[t.id]}
-            hasNotes={!!(state.notes[t.id] && (state.notes[t.id].text || (state.notes[t.id].comments||[]).length))}
-            commentCount={(state.notes[t.id]?.comments||[]).length}
-            linkedLineCount={state.money.lines.filter(l => (l.taskIds||[]).includes(t.id)).length}
-            onOpen={onOpen} onToggle={onToggle} categories={categories}
-          />
-        ))}
-      </div>
+      {tasks.length === 0 && (
+        <div className="va-sans" style={{
+          fontSize: 12, color: P.dim, padding: '14px 4px', fontStyle: 'italic',
+        }}>Nothing here with that filter.</div>
+      )}
+
+      {orderedCats.map(cat => {
+        const groupTasks = grouped[cat];
+        const c = categories[cat] || { color: P.dim, bg: P.lineSoft, emoji: '' };
+        const done = groupTasks.filter(t => state.checked[t.id]).length;
+        const total = groupTasks.length;
+        const complete = total > 0 && done === total;
+        const key = `${lane}:${cat}`;
+        const override = collapsedGroups[key];
+        const collapsed = override !== undefined ? override : complete;
+        return (
+          <div key={cat} style={{ marginBottom: 4 }}>
+            <button
+              onClick={() => onToggleGroup(key, collapsed)}
+              className="va-sans"
+              style={{
+                display: 'flex', alignItems: 'center', gap: 8, width: '100%',
+                background: 'transparent', border: 'none', cursor: 'pointer',
+                padding: '8px 4px', marginTop: 2, fontFamily: 'inherit',
+                borderBottom: `1px dashed ${P.lineSoft}`,
+                textAlign: 'left',
+              }}
+            >
+              <span style={{
+                display: 'inline-block', width: 10, color: c.color,
+                fontSize: 10, transform: collapsed ? 'rotate(-90deg)' : 'none',
+                transition: 'transform .15s',
+              }}>▾</span>
+              <span aria-hidden="true" style={{ fontSize: 13 }}>{c.emoji}</span>
+              <span style={{
+                fontSize: 12, fontWeight: 600, color: c.color,
+                letterSpacing: 0.2,
+              }}>{cat}</span>
+              <span className="va-mono" style={{
+                fontSize: 10, color: P.dim, letterSpacing: 1, marginLeft: 'auto',
+                textDecoration: complete ? 'none' : 'none',
+              }}>{done}/{total}{complete ? ' ✓' : ''}</span>
+            </button>
+            {!collapsed && (
+              <div style={{ display: 'flex', flexDirection: 'column', paddingTop: 2 }}>
+                {groupTasks.map(t => (
+                  <TaskRow key={t.id} t={t} lane={lane}
+                    checked={!!state.checked[t.id]}
+                    hasNotes={!!(state.notes[t.id] && (state.notes[t.id].text || (state.notes[t.id].comments||[]).length))}
+                    commentCount={(state.notes[t.id]?.comments||[]).length}
+                    linkedLineCount={state.money.lines.filter(l => (l.taskIds||[]).includes(t.id)).length}
+                    onOpen={onOpen} onToggle={onToggle} categories={categories}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })}
 
       <QuickAddTask lane={lane} setState={setState} onMore={onAdd}/>
     </div>
@@ -578,7 +688,7 @@ function QuickAddTask({ lane, setState, onMore }) {
           ...s.lanes,
           [lane]: [...s.lanes[lane], {
             id: taskId, text: trimmed,
-            cat: 'Documents', due: 'TBD', urgency: 'soon',
+            cat: 'Visa docs', due: 'TBD', urgency: 'soon',
           }],
         },
       };
@@ -644,7 +754,7 @@ function TaskRow({ t, checked, hasNotes, commentCount, linkedLineCount = 0, onOp
           <UrgencyPill urgency={t.urgency} due={t.due}/>
           {linkedLineCount > 0 && (
             <span title={linkedLineCount + ' linked budget line(s)'} style={{
-              fontSize: 10, color: '#8a5a2b', background: '#f4ead9',
+              fontSize: 10, color: P.accent, background: P.accentSoft,
               padding: '1px 6px', borderRadius: 4, fontWeight: 600, marginLeft: 4,
             }}>€ {linkedLineCount}</span>
           )}
@@ -733,7 +843,7 @@ function AddLineDialog({ state, setState, onClose, categories }) {
             </div>
             <div style={{
               fontSize: 22, fontWeight: 500, marginTop: 2,
-              fontFamily: '"Instrument Serif", Georgia, serif',
+              fontFamily: "'Bricolage Grotesque', system-ui, sans-serif",
             }}>Add line item</div>
           </div>
           <button onClick={onClose} style={{
@@ -786,7 +896,7 @@ function AddLineDialog({ state, setState, onClose, categories }) {
         <label style={{
           display: 'flex', alignItems: 'center', gap: 10,
           padding: '10px 12px', borderRadius: 10,
-          background: alsoTask ? '#f4ead9' : P.card,
+          background: alsoTask ? P.accentSoft : P.card,
           border: '1px solid ' + (alsoTask ? '#e0cfa8' : P.line),
           cursor: 'pointer', fontSize: 13,
         }}>
@@ -942,12 +1052,12 @@ function FxCalculator({ state, setState }) {
 
   return (
     <div className="v1-fx-card" style={{
-      background: '#f4ead9', borderRadius: 18, padding: '18px 22px',
+      background: P.accentSoft, borderRadius: 18, padding: '18px 22px',
       display: 'flex', flexDirection: 'column', gap: 10, minHeight: 0,
     }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div className="va-mono" style={{
-          fontSize: 10, letterSpacing: 2, textTransform: 'uppercase', color: '#8a5a2b',
+          fontSize: 10, letterSpacing: 2, textTransform: 'uppercase', color: P.accent,
         }}>FX calculator</div>
         <div className="va-sans" style={{
           display: 'flex', gap: 2, background: 'rgba(138,90,43,0.12)',
@@ -957,7 +1067,7 @@ function FxCalculator({ state, setState }) {
             <button key={c.key} onClick={() => setBase(c.key)} style={{
               border: 'none',
               background: base === c.key ? P.ink : 'transparent',
-              color: base === c.key ? P.card : '#8a5a2b',
+              color: base === c.key ? P.card : P.accent,
               padding: '3px 10px', borderRadius: 999,
               fontSize: 10, fontWeight: 600, cursor: 'pointer',
               fontFamily: 'inherit', letterSpacing: 0.3,
@@ -967,7 +1077,7 @@ function FxCalculator({ state, setState }) {
       </div>
 
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
-        <span className="va-sans" style={{ fontSize: 16, color: '#8a5a2b', fontWeight: 500 }}>{baseSym}</span>
+        <span className="va-sans" style={{ fontSize: 16, color: P.accent, fontWeight: 500 }}>{baseSym}</span>
         <input
           className="v1-large-input"
           type="text" size={1} inputMode="decimal"
@@ -981,7 +1091,7 @@ function FxCalculator({ state, setState }) {
             flex: 1, minWidth: 0, width: 0,
             border: 'none', background: 'transparent', outline: 'none',
             fontSize: 38, fontWeight: 400, letterSpacing: -1, color: P.ink,
-            fontFamily: '"Instrument Serif", Georgia, serif', padding: 0,
+            fontFamily: "'Bricolage Grotesque', system-ui, sans-serif", padding: 0,
             lineHeight: 1.1,
           }}
         />
@@ -995,7 +1105,7 @@ function FxCalculator({ state, setState }) {
           <div key={c.key} style={{
             display: 'flex', alignItems: 'baseline', gap: 4, minWidth: 0,
           }}>
-            <span style={{ color: '#8a5a2b', fontWeight: 700, fontSize: 10, letterSpacing: 1 }}>{c.label}</span>
+            <span style={{ color: P.accent, fontWeight: 700, fontSize: 10, letterSpacing: 1 }}>{c.label}</span>
             <span style={{
               fontSize: 13, color: P.ink, fontWeight: 500,
               overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
@@ -1007,7 +1117,7 @@ function FxCalculator({ state, setState }) {
       <div className="va-sans" style={{
         marginTop: 'auto', paddingTop: 8,
         borderTop: '1px dashed rgba(138,90,43,0.3)',
-        fontSize: 10, color: '#8a5a2b',
+        fontSize: 10, color: P.accent,
         display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8,
       }}>
         <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -1015,7 +1125,7 @@ function FxCalculator({ state, setState }) {
         </span>
         <button onClick={refresh} disabled={fetching} style={{
           border: 'none', background: 'transparent',
-          color: error ? P.danger : '#8a5a2b',
+          color: error ? P.danger : P.accent,
           cursor: fetching ? 'wait' : 'pointer',
           fontSize: 10, fontWeight: 600, fontFamily: 'inherit',
           padding: 0, textDecoration: 'underline', whiteSpace: 'nowrap',
@@ -1027,7 +1137,7 @@ function FxCalculator({ state, setState }) {
 
 function AddTaskDialog({ lane, state, setState, onClose, categories }) {
   const [text, setText] = React.useState('');
-  const [cat, setCat] = React.useState('Documents');
+  const [cat, setCat] = React.useState('Visa docs');
   const [due, setDue] = React.useState('Soon');
   const [urgency, setUrgency] = React.useState('soon');
   const [alsoLine, setAlsoLine] = React.useState(false);
@@ -1092,7 +1202,7 @@ function AddTaskDialog({ lane, state, setState, onClose, categories }) {
             </div>
             <div style={{
               fontSize: 22, fontWeight: 500, marginTop: 2,
-              fontFamily: '"Instrument Serif", Georgia, serif',
+              fontFamily: "'Bricolage Grotesque', system-ui, sans-serif",
             }}>Add task</div>
           </div>
           <button onClick={onClose} style={{
@@ -1157,7 +1267,7 @@ function AddTaskDialog({ lane, state, setState, onClose, categories }) {
         <label style={{
           display: 'flex', alignItems: 'center', gap: 10,
           padding: '10px 12px', borderRadius: 10,
-          background: alsoLine ? '#f4ead9' : P.card,
+          background: alsoLine ? P.accentSoft : P.card,
           border: '1px solid ' + (alsoLine ? '#e0cfa8' : P.line),
           cursor: 'pointer', fontSize: 13,
         }}>
