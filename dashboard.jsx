@@ -180,6 +180,8 @@ function VariationA({ onReset }) {
         <div className="v1-money-card" style={{
           background: P.card, borderRadius: 18, padding: '24px 26px',
         }}>
+          <FundingProgress sentEUR={totals.sentEUR} totalEUR={totals.totalEUR}/>
+
           <div className="v1-money-stats" style={{
             display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 36,
             paddingBottom: 18, borderBottom: '1px dashed rgba(24,20,15,0.1)',
