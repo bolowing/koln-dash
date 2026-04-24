@@ -198,7 +198,7 @@ function PencilIcon() {
   );
 }
 
-function TaskDetailDrawer({ task, lane, state, setState, onClose }) {
+function TaskDetailDrawer({ task, lane, state, setState, onClose, onOpenLine }) {
   if (!task) return null;
   const checked = !!state.checked[task.id];
   const noteObj = state.notes[task.id] || { text: '', comments: [] };
@@ -234,9 +234,40 @@ function TaskDetailDrawer({ task, lane, state, setState, onClose }) {
         lanes: { ...s.lanes, [lane]: s.lanes[lane].filter(t => t.id !== task.id) },
         notes: nextNotes,
         checked: nextChecked,
+        money: {
+          ...s.money,
+          lines: s.money.lines.map(l => ({
+            ...l, taskIds: (l.taskIds || []).filter(id => id !== task.id),
+          })),
+        },
       };
     });
     onClose();
+  };
+
+  const linkedLines = KD.linkedLines(state, task.id);
+
+  const unlinkLine = (lineId) => setState(s => ({
+    ...s,
+    money: {
+      ...s.money,
+      lines: s.money.lines.map(l => l.id === lineId
+        ? { ...l, taskIds: (l.taskIds || []).filter(id => id !== task.id) }
+        : l),
+    },
+  }));
+
+  const linkExistingLine = (lineId) => {
+    if (!lineId) return;
+    setState(s => ({
+      ...s,
+      money: {
+        ...s.money,
+        lines: s.money.lines.map(l => l.id === lineId
+          ? { ...l, taskIds: Array.from(new Set([...(l.taskIds || []), task.id])) }
+          : l),
+      },
+    }));
   };
 
   const postComment = () => {
@@ -364,6 +395,14 @@ function TaskDetailDrawer({ task, lane, state, setState, onClose }) {
           </div>
         </div>
 
+        <LinkedLinesBlock
+          lines={linkedLines}
+          allLines={state.money.lines}
+          onOpenLine={onOpenLine}
+          onUnlink={unlinkLine}
+          onLink={linkExistingLine}
+        />
+
         <label style={{
           display: 'flex', alignItems: 'center', gap: 10,
           padding: '10px 12px', borderRadius: 10,
@@ -471,8 +510,292 @@ function TaskDetailDrawer({ task, lane, state, setState, onClose }) {
   );
 }
 
+function LinkedLinesBlock({ lines, allLines, onOpenLine, onUnlink, onLink }) {
+  const [picking, setPicking] = React.useState(false);
+  const available = allLines.filter(l => !lines.some(ll => ll.id === l.id));
+  const statusColor = { sent: '#2f7d5b', pending: '#d98a45', recurring: '#6b7b8c' };
+
+  return (
+    <div>
+      <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.8, color: '#7a7266', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
+        Linked budget lines
+      </div>
+      {lines.length === 0 && !picking && (
+        <div style={{ fontSize: 12, color: '#a8a095', fontStyle: 'italic', marginBottom: 6 }}>
+          No linked line items.
+        </div>
+      )}
+      {lines.map(l => (
+        <div key={l.id} style={{
+          background: '#fff', border: '1px solid rgba(24,20,15,0.08)', borderRadius: 10,
+          padding: '8px 10px', marginBottom: 6,
+          display: 'grid', gridTemplateColumns: '8px 1fr auto auto', gap: 10, alignItems: 'center',
+          cursor: 'pointer',
+        }} onClick={() => onOpenLine && onOpenLine(l.id)}>
+          <span style={{ width: 8, height: 8, borderRadius: 999, background: statusColor[l.status] || '#bbb' }}/>
+          <div>
+            <div style={{ fontSize: 13, fontWeight: 500, color: '#1d1a15' }}>{l.label}</div>
+            <div style={{ fontSize: 11, color: '#7a7266', marginTop: 1 }}>{l.status}</div>
+          </div>
+          <div style={{ fontSize: 13, fontWeight: 500, color: '#1d1a15' }}>€{(l.amountEUR || 0).toLocaleString('de-DE')}</div>
+          <button onClick={e => { e.stopPropagation(); onUnlink(l.id); }} style={{
+            border: 'none', background: 'transparent', color: '#9a2f3f',
+            cursor: 'pointer', fontSize: 11, fontWeight: 600, fontFamily: 'inherit',
+          }}>Unlink</button>
+        </div>
+      ))}
+      {picking ? (
+        <div style={{ display: 'flex', gap: 6, marginTop: 4 }}>
+          <select
+            autoFocus
+            onChange={e => { if (e.target.value) { onLink(e.target.value); setPicking(false); } }}
+            defaultValue=""
+            style={{
+              flex: 1, fontFamily: 'inherit', fontSize: 12, padding: '6px 8px',
+              borderRadius: 8, border: '1px solid rgba(24,20,15,0.15)', background: '#fff',
+            }}
+          >
+            <option value="" disabled>Pick a line item…</option>
+            {available.map(l => (
+              <option key={l.id} value={l.id}>{l.label} · €{(l.amountEUR||0).toLocaleString('de-DE')}</option>
+            ))}
+          </select>
+          <button onClick={() => setPicking(false)} style={{
+            border: 'none', background: 'transparent', color: '#7a7266',
+            cursor: 'pointer', fontSize: 11, fontFamily: 'inherit',
+          }}>Cancel</button>
+        </div>
+      ) : (
+        available.length > 0 && (
+          <button onClick={() => setPicking(true)} style={{
+            border: '1px dashed rgba(24,20,15,0.18)', background: 'transparent', color: '#7a7266',
+            padding: '5px 10px', borderRadius: 8, cursor: 'pointer',
+            fontSize: 11, fontWeight: 500, fontFamily: 'inherit',
+          }}>+ Link existing line</button>
+        )
+      )}
+    </div>
+  );
+}
+
+function LineDetailDrawer({ lineId, state, setState, onClose, onOpenTask }) {
+  const line = state.money.lines.find(l => l.id === lineId);
+  if (!line) return null;
+
+  const updateLine = (patch) => setState(s => ({
+    ...s,
+    money: {
+      ...s.money,
+      lines: s.money.lines.map(l => l.id === line.id ? { ...l, ...patch } : l),
+    },
+  }));
+
+  const deleteLine = () => {
+    if (!confirm('Delete this line item? This cannot be undone.')) return;
+    setState(s => ({
+      ...s,
+      money: { ...s.money, lines: s.money.lines.filter(l => l.id !== line.id) },
+    }));
+    onClose();
+  };
+
+  const allTasks = [
+    ...state.lanes.VJ.map(t => ({ ...t, lane: 'VJ' })),
+    ...state.lanes.Jul.map(t => ({ ...t, lane: 'Jul' })),
+  ];
+  const linkedTasks = (line.taskIds || []).map(id => allTasks.find(t => t.id === id)).filter(Boolean);
+  const availableTasks = allTasks.filter(t => !(line.taskIds || []).includes(t.id));
+  const [picking, setPicking] = React.useState(false);
+
+  const unlinkTask = (taskId) => updateLine({ taskIds: (line.taskIds || []).filter(id => id !== taskId) });
+  const linkTask = (taskId) => {
+    if (!taskId) return;
+    updateLine({ taskIds: Array.from(new Set([...(line.taskIds || []), taskId])) });
+  };
+
+  const statusOptions = [
+    { key: 'sent',      label: 'Sent',      color: '#2f7d5b' },
+    { key: 'pending',   label: 'Pending',   color: '#d98a45' },
+    { key: 'recurring', label: 'Recurring', color: '#6b7b8c' },
+  ];
+
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 50,
+      display: 'flex', justifyContent: 'flex-end',
+      background: 'rgba(24,20,15,0.25)', backdropFilter: 'blur(2px)',
+    }} onClick={onClose}>
+      <div style={{
+        width: 420, maxWidth: '90%', height: '100%',
+        background: '#fbf8f3', borderLeft: '1px solid rgba(24,20,15,0.1)',
+        boxShadow: '-20px 0 60px rgba(0,0,0,0.12)',
+        padding: '24px 26px', overflowY: 'auto',
+        display: 'flex', flexDirection: 'column', gap: 18,
+      }} onClick={e => e.stopPropagation()}>
+
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <div style={{ fontSize: 11, letterSpacing: 0.8, color: '#7a7266', textTransform: 'uppercase' }}>
+            Budget line · {line.status}
+          </div>
+          <button onClick={onClose} style={{
+            border: 'none', background: 'transparent', fontSize: 20,
+            cursor: 'pointer', color: '#7a7266', padding: 0, lineHeight: 1,
+          }}>×</button>
+        </div>
+
+        <div>
+          <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.8, color: '#7a7266', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
+            Label <PencilIcon/>
+          </div>
+          <div style={{
+            fontSize: 18, fontWeight: 500, lineHeight: 1.3, color: '#1d1a15',
+            border: '1px dashed rgba(24,20,15,0.12)', borderRadius: 8,
+            padding: '8px 10px', background: '#fff',
+          }}>
+            <EditableText
+              value={line.label}
+              onChange={(v) => { if (v.trim()) updateLine({ label: v.trim() }); }}
+              placeholder="Line item label…"
+            />
+          </div>
+
+          <div style={{ marginTop: 12, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+            <div>
+              <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.8, color: '#7a7266', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
+                Amount (EUR) <PencilIcon/>
+              </div>
+              <div style={{
+                fontSize: 16, fontWeight: 500, color: '#1d1a15',
+                border: '1px dashed rgba(24,20,15,0.12)', borderRadius: 6,
+                padding: '5px 9px', background: '#fff',
+              }}>
+                €<EditableNumber
+                  value={line.amountEUR}
+                  onChange={(n) => updateLine({ amountEUR: n })}
+                />
+              </div>
+            </div>
+            <div>
+              <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.8, color: '#7a7266', marginBottom: 6 }}>
+                Status
+              </div>
+              <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
+                {statusOptions.map(s => {
+                  const active = line.status === s.key;
+                  return (
+                    <button key={s.key} onClick={() => updateLine({ status: s.key })} style={{
+                      border: '1px solid ' + (active ? s.color : 'rgba(24,20,15,0.15)'),
+                      background: active ? s.color : 'transparent',
+                      color: active ? '#fff' : s.color,
+                      padding: '4px 10px', borderRadius: 999,
+                      fontSize: 11, fontWeight: 600, cursor: 'pointer',
+                      fontFamily: 'inherit',
+                    }}>{s.label}</button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.8, color: '#7a7266', marginBottom: 6 }}>
+            Note
+          </div>
+          <div style={{
+            background: '#fff', border: '1px solid rgba(24,20,15,0.08)', borderRadius: 10,
+            padding: 12, minHeight: 50, fontSize: 13, lineHeight: 1.45,
+          }}>
+            <EditableText
+              value={line.note}
+              onChange={(v) => updateLine({ note: v })}
+              placeholder="Add details, wire reference, etc…"
+              multiline
+            />
+          </div>
+        </div>
+
+        <div>
+          <div style={{ fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.8, color: '#7a7266', marginBottom: 6 }}>
+            Linked tasks
+          </div>
+          {linkedTasks.length === 0 && !picking && (
+            <div style={{ fontSize: 12, color: '#a8a095', fontStyle: 'italic', marginBottom: 6 }}>
+              No linked tasks.
+            </div>
+          )}
+          {linkedTasks.map(t => (
+            <div key={t.id} style={{
+              background: '#fff', border: '1px solid rgba(24,20,15,0.08)', borderRadius: 10,
+              padding: '8px 10px', marginBottom: 6,
+              display: 'grid', gridTemplateColumns: '1fr auto auto', gap: 10, alignItems: 'center',
+              cursor: 'pointer',
+            }} onClick={() => onOpenTask && onOpenTask(t.id, t.lane)}>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 500, color: '#1d1a15',
+                  textDecoration: state.checked[t.id] ? 'line-through' : 'none',
+                  opacity: state.checked[t.id] ? 0.5 : 1,
+                }}>{t.text}</div>
+                <div style={{ fontSize: 11, color: '#7a7266', marginTop: 1 }}>{t.lane}'s lane · {t.due}</div>
+              </div>
+              <CategoryChip cat={t.cat} categories={state.categories || KD_DEFAULTS.categories}/>
+              <button onClick={e => { e.stopPropagation(); unlinkTask(t.id); }} style={{
+                border: 'none', background: 'transparent', color: '#9a2f3f',
+                cursor: 'pointer', fontSize: 11, fontWeight: 600, fontFamily: 'inherit',
+              }}>Unlink</button>
+            </div>
+          ))}
+          {picking ? (
+            <div style={{ display: 'flex', gap: 6, marginTop: 4 }}>
+              <select
+                autoFocus
+                onChange={e => { if (e.target.value) { linkTask(e.target.value); setPicking(false); } }}
+                defaultValue=""
+                style={{
+                  flex: 1, fontFamily: 'inherit', fontSize: 12, padding: '6px 8px',
+                  borderRadius: 8, border: '1px solid rgba(24,20,15,0.15)', background: '#fff',
+                }}
+              >
+                <option value="" disabled>Pick a task…</option>
+                {availableTasks.map(t => (
+                  <option key={t.id} value={t.id}>{t.lane} · {t.text}</option>
+                ))}
+              </select>
+              <button onClick={() => setPicking(false)} style={{
+                border: 'none', background: 'transparent', color: '#7a7266',
+                cursor: 'pointer', fontSize: 11, fontFamily: 'inherit',
+              }}>Cancel</button>
+            </div>
+          ) : (
+            availableTasks.length > 0 && (
+              <button onClick={() => setPicking(true)} style={{
+                border: '1px dashed rgba(24,20,15,0.18)', background: 'transparent', color: '#7a7266',
+                padding: '5px 10px', borderRadius: 8, cursor: 'pointer',
+                fontSize: 11, fontWeight: 500, fontFamily: 'inherit',
+              }}>+ Link existing task</button>
+            )
+          )}
+        </div>
+
+        <div style={{ flex: 1 }}/>
+
+        <div style={{
+          paddingTop: 12, borderTop: '1px solid rgba(24,20,15,0.08)',
+          display: 'flex', justifyContent: 'flex-end',
+        }}>
+          <button onClick={deleteLine} style={{
+            border: '1px solid rgba(154,47,63,0.3)', background: 'transparent',
+            color: '#9a2f3f', padding: '6px 12px', borderRadius: 8,
+            fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
+          }}>Delete line item</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 Object.assign(window, {
   ui_palette, CategoryChip, UrgencyPill,
   EditableNumber, EditableText, RingProgress, StackedBudgetBar,
-  TaskDetailDrawer,
+  TaskDetailDrawer, LineDetailDrawer, LinkedLinesBlock, PencilIcon,
 });
