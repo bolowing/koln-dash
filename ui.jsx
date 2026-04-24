@@ -143,6 +143,165 @@ function RingProgress({ pct, size=64, stroke=6, color=P.accent, bg=P.line }) {
   );
 }
 
+function GermanDude({ size = 52, hopping = false, waving = false }) {
+  const anim = hopping ? 'kd-hop 0.55s ease'
+             : waving  ? 'kd-wave 0.9s ease'
+             : 'kd-bob 1.4s ease-in-out infinite';
+  return (
+    <svg width={size} height={size} viewBox="0 0 64 72" style={{
+      display: 'block',
+      animation: anim,
+      transformOrigin: 'bottom center',
+      filter: 'drop-shadow(0 2px 3px rgba(0,0,0,0.18))',
+    }}>
+      {/* Legs (walking) */}
+      <rect x="26" y="54" width="4" height="12" fill="#2a1d10" rx="1">
+        <animateTransform attributeName="transform" type="rotate"
+          values="-12 28 54; 12 28 54; -12 28 54" dur="0.7s" repeatCount="indefinite"/>
+      </rect>
+      <rect x="34" y="54" width="4" height="12" fill="#2a1d10" rx="1">
+        <animateTransform attributeName="transform" type="rotate"
+          values="12 36 54; -12 36 54; 12 36 54" dur="0.7s" repeatCount="indefinite"/>
+      </rect>
+      {/* Shoes */}
+      <ellipse cx="28" cy="68" rx="4" ry="2" fill="#1a1208"/>
+      <ellipse cx="36" cy="68" rx="4" ry="2" fill="#1a1208"/>
+      {/* Lederhosen body */}
+      <path d="M20 38 Q20 56 26 56 L38 56 Q44 56 44 38 Z" fill="#8a4a22"/>
+      {/* Suspender straps */}
+      <path d="M25 38 L28 22" stroke="#5a2f12" strokeWidth="2" fill="none" strokeLinecap="round"/>
+      <path d="M39 38 L36 22" stroke="#5a2f12" strokeWidth="2" fill="none" strokeLinecap="round"/>
+      {/* Heart on lederhosen */}
+      <path d="M30 46 q0 -2 2 -2 q2 0 2 2 q0 2 -2 4 q-2 -2 -2 -4 z" fill="#d8c060"/>
+      {/* Shirt */}
+      <path d="M22 22 L22 40 L42 40 L42 22 Z" fill="#f6ead0"/>
+      {/* Arms */}
+      <path d="M22 26 Q14 32 16 42" stroke="#f0c79a" strokeWidth="5" fill="none" strokeLinecap="round"/>
+      <path d="M42 26 Q50 30 48 38" stroke="#f0c79a" strokeWidth="5" fill="none" strokeLinecap="round"/>
+      {/* Beer mug in right hand */}
+      <rect x="46" y="34" width="8" height="10" fill="#f4d76a" stroke="#5a2f12" strokeWidth="1.2" rx="1"/>
+      <ellipse cx="50" cy="35" rx="3.5" ry="1.4" fill="#fffdf2"/>
+      <path d="M54 36 Q57 37 57 39 Q57 41 54 42" fill="none" stroke="#5a2f12" strokeWidth="1.2"/>
+      {/* Head */}
+      <circle cx="32" cy="18" r="8" fill="#f0c79a"/>
+      {/* Ears */}
+      <circle cx="24" cy="18" r="1.6" fill="#e2b384"/>
+      <circle cx="40" cy="18" r="1.6" fill="#e2b384"/>
+      {/* Eyes */}
+      <circle cx="29" cy="17" r="1" fill="#1a1208"/>
+      <circle cx="35" cy="17" r="1" fill="#1a1208"/>
+      {/* Cheeks */}
+      <circle cx="27" cy="20" r="1.4" fill="#e89878" opacity="0.55"/>
+      <circle cx="37" cy="20" r="1.4" fill="#e89878" opacity="0.55"/>
+      {/* Mustache */}
+      <path d="M27 22 Q29 24 32 23 Q35 24 37 22" stroke="#3a2410" strokeWidth="1.6" fill="none" strokeLinecap="round"/>
+      {/* Tyrolean hat */}
+      <ellipse cx="32" cy="11" rx="11" ry="1.8" fill="#2f4a2c"/>
+      <path d="M24 11 Q26 3 32 3 Q38 3 40 11 Z" fill="#3a5a36"/>
+      <path d="M24 11 Q32 13 40 11" stroke="#243d22" strokeWidth="0.8" fill="none"/>
+      {/* Hat band */}
+      <path d="M25 9 L39 9" stroke="#1f3220" strokeWidth="1.6"/>
+      {/* Feather */}
+      <path d="M39 9 Q43 4 41 0" stroke="#b8331a" strokeWidth="2" fill="none" strokeLinecap="round"/>
+      <path d="M40 5 L43 6" stroke="#b8331a" strokeWidth="1.2" strokeLinecap="round"/>
+    </svg>
+  );
+}
+
+function FundingProgress({ sentEUR, totalEUR }) {
+  const pct = totalEUR > 0 ? (sentEUR / totalEUR) * 100 : 0;
+  const pctRounded = Math.round(pct);
+  const [hopping, setHopping] = React.useState(false);
+  const hopTimer = React.useRef(null);
+
+  React.useEffect(() => {
+    const onClick = () => {
+      setHopping(true);
+      clearTimeout(hopTimer.current);
+      hopTimer.current = setTimeout(() => setHopping(false), 560);
+    };
+    document.addEventListener('click', onClick);
+    return () => {
+      document.removeEventListener('click', onClick);
+      clearTimeout(hopTimer.current);
+    };
+  }, []);
+
+  const dudePos = Math.max(0, Math.min(100, pct));
+
+  return (
+    <div style={{ paddingBottom: 18, borderBottom: '1px dashed rgba(24,20,15,0.1)', marginBottom: 18 }}>
+      <style>{`
+        @keyframes kd-bob {
+          0%,100% { transform: translateY(0) rotate(-1.5deg); }
+          50%     { transform: translateY(-2px) rotate(1.5deg); }
+        }
+        @keyframes kd-hop {
+          0%   { transform: translateY(0) scale(1,1); }
+          25%  { transform: translateY(-14px) scale(1.05, 0.95) rotate(-4deg); }
+          55%  { transform: translateY(0) scale(0.96, 1.04); }
+          75%  { transform: translateY(-4px) scale(1.02, 0.98) rotate(2deg); }
+          100% { transform: translateY(0) scale(1,1); }
+        }
+        @keyframes kd-wave {
+          0%,100% { transform: rotate(0deg); }
+          50%     { transform: rotate(-8deg); }
+        }
+      `}</style>
+
+      <div style={{
+        display: 'flex', justifyContent: 'space-between', alignItems: 'baseline',
+        marginBottom: 14, gap: 12, flexWrap: 'wrap',
+      }}>
+        <div className="va-mono" style={{
+          fontSize: 10, letterSpacing: 2, textTransform: 'uppercase',
+          color: P.accent, fontWeight: 600,
+        }}>Funding progress</div>
+        <div className="va-sans" style={{ fontSize: 13, color: P.dimStrong }}>
+          <span style={{ fontWeight: 600, color: P.ink }}>€{sentEUR.toLocaleString('de-DE')}</span>
+          <span style={{ color: P.dim }}> of €{totalEUR.toLocaleString('de-DE')} · </span>
+          <span style={{ color: P.accent, fontWeight: 600 }}>{pctRounded}%</span>
+        </div>
+      </div>
+
+      <div style={{ position: 'relative', height: 64 }}>
+        <div style={{
+          position: 'absolute',
+          left: `${dudePos}%`,
+          bottom: 4,
+          transform: 'translateX(-50%)',
+          transition: 'left 0.7s cubic-bezier(.4,.6,.3,1)',
+          pointerEvents: 'none',
+          zIndex: 2,
+        }}>
+          <GermanDude hopping={hopping}/>
+        </div>
+        <div style={{
+          position: 'absolute', left: 0, right: 0, bottom: 0,
+          height: 6, borderRadius: 999, background: P.lineSoft,
+          overflow: 'hidden',
+        }}>
+          <div style={{
+            width: `${pct}%`, height: '100%',
+            background: 'linear-gradient(90deg, #c8985f 0%, #9b4722 100%)',
+            transition: 'width 0.7s cubic-bezier(.4,.6,.3,1)',
+            borderRadius: 999,
+          }}/>
+        </div>
+      </div>
+
+      <div className="va-mono" style={{
+        display: 'flex', justifyContent: 'space-between',
+        fontSize: 10, letterSpacing: 2, textTransform: 'uppercase',
+        marginTop: 8,
+      }}>
+        <span style={{ color: P.dim }}>Jakarta, Indonesia</span>
+        <span style={{ color: P.accent, fontWeight: 600 }}>Köln →</span>
+      </div>
+    </div>
+  );
+}
+
 function StackedBudgetBar({ lines, totalEUR }) {
   const colors = KD.statusColor;
   return (
@@ -777,6 +936,6 @@ function LineDetailDrawer({ lineId, state, setState, onClose, onOpenTask }) {
 
 Object.assign(window, {
   CategoryChip, UrgencyPill,
-  EditableNumber, EditableText, RingProgress, StackedBudgetBar,
+  EditableNumber, EditableText, RingProgress, StackedBudgetBar, FundingProgress,
   TaskDetailDrawer, LineDetailDrawer, LinkedLinesBlock, PencilIcon,
 });
