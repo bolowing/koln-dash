@@ -72,11 +72,40 @@
       monthlyReleaseEUR: 992,
       monthlyCostEUR: 600,
       lines: [
-        { id: 'm-fintiba', label: 'Fintiba blocked account', amountEUR: 11904, status: 'pending', note: 'Monthly €992 × 12 (Bürgschaft)', taskIds: [] },
+        { id: 'm-fintiba', label: 'Fintiba blocked account', amountEUR: 12063, status: 'pending', note: 'Monthly €992 × 12 + Fintiba fees', taskIds: [] },
         { id: 'm-tuition', label: 'CBS tuition — Wire 1 of 2', amountEUR: 2000, status: 'sent', note: 'Merrill 529 → CBS', taskIds: [] },
         { id: 'm-tuition2',label: 'CBS tuition — Wire 2 of 2', amountEUR: 8150, status: 'pending', note: 'Remaining tuition balance', taskIds: ['j2'] },
         { id: 'm-setup',   label: 'One-time setup (flight, deposit, visa)', amountEUR: 2809, status: 'pending', note: 'Flight + Kaution + Visa fees', taskIds: [] },
         { id: 'm-living',  label: 'Monthly living (food, transit, phone)', amountEUR: 600, status: 'recurring', note: 'Est. €600/mo on top of Fintiba', taskIds: [] },
+      ],
+    },
+
+    // UI state — section collapse/expand persists across reloads.
+    ui: {
+      collapsed: {},
+    },
+
+    // Fintiba blocked account — the €12,063 deposit that releases €992/mo
+    // for living expenses once VJ activates the account in Germany.
+    blocked: {
+      provider: 'Fintiba',
+      totalEUR: 12063,
+      monthlyReleaseEUR: 992,
+      months: 12,
+      depositedEUR: 0,           // how much VJ has wired so far
+      activated: false,           // toggled true after Anmeldung + visa
+      firstReleaseMonth: '',      // YYYY-MM, set when known
+      releasedCount: 0,           // how many monthly drops have hit
+      currentAccount: '',         // e.g. 'N26', 'Sparkasse', 'Fintiba bundle'
+      germanPhone: '',            // German mobile number once obtained
+      steps: [
+        { id: 'b1', label: 'Open Fintiba blocked account', done: true },
+        { id: 'b2', label: 'Wire €12,063 to Fintiba', done: false },
+        { id: 'b3', label: 'Get a German phone number',  done: false },
+        { id: 'b4', label: 'Open a German current account', done: false },
+        { id: 'b5', label: 'Anmeldung (city registration)', done: false },
+        { id: 'b6', label: 'Activate Fintiba in Germany',   done: false },
+        { id: 'b7', label: 'Link current account for monthly releases', done: false },
       ],
     },
 
@@ -106,7 +135,7 @@
       Jul: [
         { id: 'j1', text: 'Confirm tuition Wire 1 received by CBS', cat: 'Financial', due: 'May 1', urgency: 'soon' },
         { id: 'j2', text: 'Initiate Merrill 529 Wire 2 (€10,150)', cat: 'Financial', due: 'ASAP', urgency: 'asap' },
-        { id: 'j3', text: 'Fund Fintiba blocked account (€11,904)', cat: 'Financial', due: 'After W2', urgency: 'soon' },
+        { id: 'j3', text: 'Fund Fintiba blocked account (€12,063)', cat: 'Financial', due: 'After W2', urgency: 'soon' },
         { id: 'j4', text: 'Book Germany trip with Hafiz (move-in)', cat: 'Travel', due: 'TBD', urgency: 'later' },
       ],
     },
@@ -158,10 +187,21 @@
           for (const key of Object.keys(parsed.categories || {})) {
             mergedCats[key] = { ...DEFAULTS.categories[key], ...parsed.categories[key] };
           }
+          // Merge blocked-account state, preserving saved progress on
+          // steps array by id (so renaming/adding steps in DEFAULTS
+          // doesn't wipe out toggled checkboxes).
+          const savedSteps = (parsed.blocked && Array.isArray(parsed.blocked.steps)) ? parsed.blocked.steps : [];
+          const stepDoneById = Object.fromEntries(savedSteps.map(s => [s.id, !!s.done]));
+          const mergedSteps = DEFAULTS.blocked.steps.map(s => ({
+            ...s, done: stepDoneById[s.id] !== undefined ? stepDoneById[s.id] : s.done,
+          }));
           return { ...DEFAULTS, ...parsed,
             meta:  { ...DEFAULTS.meta,  ...(parsed.meta||{}) },
             money: { ...DEFAULTS.money, ...(parsed.money||{}) },
             lanes: { ...DEFAULTS.lanes, ...(parsed.lanes||{}) },
+            blocked: { ...DEFAULTS.blocked, ...(parsed.blocked||{}), steps: mergedSteps },
+            ui: { ...DEFAULTS.ui, ...(parsed.ui||{}),
+              collapsed: { ...(parsed.ui && parsed.ui.collapsed || {}) } },
             categories: mergedCats,
             checked: parsed.checked || {},
             notes: parsed.notes || {},

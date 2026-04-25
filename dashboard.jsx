@@ -66,7 +66,41 @@ function VariationA({ onReset }) {
         .v1-section-h2,
         .v1-days-num { font-family: 'Bricolage Grotesque', system-ui, sans-serif; font-optical-sizing: auto; }
         .v1-hero-row > * { min-width: 0; }
+
+        /* Two-column layout: TOC sidebar + main content. Single column on narrow. */
+        .v1-layout { display: block; }
+        .v1-layout > .v1-toc-col { display: none; }
+        @media (min-width: 1180px) {
+          .v1-layout {
+            display: grid;
+            grid-template-columns: 220px 1fr;
+            column-gap: 36px;
+          }
+          .v1-layout > .v1-toc-col {
+            display: block;
+            /* Aside must stretch to the grid row's full height so the
+               sticky nav inside has room to scroll-track the viewport. */
+            align-self: stretch;
+            position: relative;
+          }
+        }
+        .v1-main-col { min-width: 0; }
       `}</style>
+
+      <div className="v1-layout">
+        <aside className="v1-toc-col">
+          <TableOfContents
+            state={state} setState={setState}
+            items={[
+              { id: 'progress', label: 'Progress' },
+              { id: 'blocked',  label: 'Blocked account' },
+              { id: 'money',    label: 'Money movement' },
+              { id: 'tasks',    label: 'Tasks' },
+              { id: 'ahead',    label: "What's ahead" },
+            ]}
+          />
+        </aside>
+        <div className="v1-main-col">
 
       {/* Masthead */}
       <header className="v1-masthead" style={{
@@ -160,16 +194,13 @@ function VariationA({ onReset }) {
       </section>
 
       {/* Progress — the hero narrative: tasks done, Bavarian dude + advice */}
-      <section style={{ marginBottom: 28 }}>
-        <div style={{
-          display: 'flex', alignItems: 'baseline', flexWrap: 'wrap', gap: 14, marginBottom: 14,
-        }}>
-          <h2 className="v1-section-h2" style={{ fontSize: 30, fontWeight: 400, margin: 0, letterSpacing: -0.5 }}>Progress</h2>
-          <span className="va-sans" style={{ fontSize: 12, color: P.dim }}>
-            How close we are — with commentary from the lederhosen department
-          </span>
-        </div>
-
+      <Section
+        id="progress"
+        title="Progress"
+        subtitle="How close we are — with commentary from the lederhosen department"
+        headingSize={30}
+        state={state} setState={setState}
+      >
         <div className="v1-progress-card" style={{
           background: P.card, borderRadius: 18, padding: '24px 26px',
         }}>
@@ -211,19 +242,29 @@ function VariationA({ onReset }) {
             })}
           </div>
         </div>
-      </section>
+      </Section>
+
+      {/* Blocked account — Fintiba Sperrkonto rundown */}
+      <Section
+        id="blocked"
+        title="Blocked account"
+        subtitle="Wire once, draw €992/mo for living expenses"
+        state={state} setState={setState}
+      >
+        <div style={{
+          background: P.card, borderRadius: 18, padding: '24px 26px',
+        }}>
+          <BlockedAccount state={state} setState={setState}/>
+        </div>
+      </Section>
 
       {/* Money movement — demoted but still full-featured */}
-      <section style={{ marginBottom: 28 }}>
-        <div style={{
-          display: 'flex', alignItems: 'baseline', flexWrap: 'wrap', gap: 14, marginBottom: 14,
-        }}>
-          <h2 className="v1-section-h2" style={{ fontSize: 22, fontWeight: 400, margin: 0, letterSpacing: -0.3 }}>Money movement</h2>
-          <span className="va-sans" style={{ fontSize: 12, color: P.dim }}>
-            Total budget + what's moved so far
-          </span>
-        </div>
-
+      <Section
+        id="money"
+        title="Money movement"
+        subtitle="Total budget + what's moved so far"
+        state={state} setState={setState}
+      >
         <div className="v1-money-card" style={{
           background: P.card, borderRadius: 18, padding: '24px 26px',
         }}>
@@ -294,18 +335,16 @@ function VariationA({ onReset }) {
             fontSize: 13, width: '100%', fontFamily: 'inherit', fontWeight: 500,
           }}>+ Add line item</button>
         </div>
-      </section>
+      </Section>
 
       {/* Tasks */}
-      <section style={{ marginBottom: 28 }}>
-        <div className="v1-tasks-head" style={{
-          display: 'flex', alignItems: 'baseline', justifyContent: 'space-between',
-          marginBottom: 14,
-        }}>
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 14 }}>
-            <h2 className="v1-section-h2" style={{ fontSize: 30, fontWeight: 400, margin: 0, letterSpacing: -0.5 }}>Tasks</h2>
-            <span className="va-sans" style={{ fontSize: 12, color: P.dim }}>Tap a task to open · click the box to check off</span>
-          </div>
+      <Section
+        id="tasks"
+        title="Tasks"
+        subtitle="Tap a task to open · click the box to check off"
+        headingSize={30}
+        state={state} setState={setState}
+        headerRight={
           <div className="va-sans" style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
             {[['all','All'],['asap','ASAP'],['mine','VJ'],['jul','Jul']].map(([k,label]) => (
               <button key={k} className="v1-tab-btn" onClick={() => setTab(k)} style={{
@@ -317,8 +356,8 @@ function VariationA({ onReset }) {
               }}>{label}</button>
             ))}
           </div>
-        </div>
-
+        }
+      >
         {/* Category filter chips — click one to narrow, click again to clear */}
         <div className="va-sans" style={{
           display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 14,
@@ -392,15 +431,16 @@ function VariationA({ onReset }) {
             categories={cats}
           />
         </div>
-      </section>
+      </Section>
 
       {/* What's ahead — timeline only */}
-      <section style={{ marginBottom: 12 }}>
-        <div style={{ display: 'flex', alignItems: 'baseline', flexWrap: 'wrap', gap: 14, marginBottom: 14 }}>
-          <h2 className="v1-section-h2" style={{ fontSize: 30, fontWeight: 400, margin: 0, letterSpacing: -0.5 }}>What's ahead</h2>
-          <span className="va-sans" style={{ fontSize: 12, color: P.dim }}>Milestones between here and Köln</span>
-        </div>
-
+      <Section
+        id="ahead"
+        title="What's ahead"
+        subtitle="Milestones between here and Köln"
+        headingSize={30}
+        state={state} setState={setState}
+      >
         <div style={{
           background: P.card, borderRadius: 18, padding: '22px 24px',
           position: 'relative',
@@ -429,7 +469,7 @@ function VariationA({ onReset }) {
             ))}
           </div>
         </div>
-      </section>
+      </Section>
 
       <footer className="va-sans v1-foot" style={{
         marginTop: 30, paddingTop: 16,
@@ -484,6 +524,8 @@ function VariationA({ onReset }) {
           categories={cats}
         />
       )}
+        </div>
+      </div>
     </div>
   );
 }
