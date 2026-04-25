@@ -591,6 +591,169 @@ function OverallProgress({ state }) {
   );
 }
 
+// "What's ahead" timeline with inline add/delete editor.
+function MilestoneTimeline({ state, setState, categories }) {
+  const items = Array.isArray(state.upcoming) ? state.upcoming : [];
+  const [adding, setAdding] = React.useState(false);
+  const [draft, setDraft] = React.useState({ when: '', what: '', cat: 'Personal' });
+
+  const catNames = Object.keys(categories);
+
+  const addMilestone = () => {
+    const when = draft.when.trim();
+    const what = draft.what.trim();
+    if (!when || !what) return;
+    const id = 'mu-' + Date.now();
+    setState(s => ({
+      ...s,
+      upcoming: [...(s.upcoming || []), { id, when, what, cat: draft.cat }],
+    }));
+    setDraft({ when: '', what: '', cat: 'Personal' });
+    setAdding(false);
+  };
+
+  const removeMilestone = (id) => {
+    setState(s => ({
+      ...s,
+      upcoming: (s.upcoming || []).filter(u => u.id !== id),
+    }));
+  };
+
+  return (
+    <div style={{
+      background: P.card, borderRadius: 18, padding: '22px 24px',
+      position: 'relative',
+    }}>
+      <style>{`
+        .v1-timeline-row { transition: background 0.12s ease; }
+        .v1-timeline-row:hover { background: var(--kd-hover); }
+        .v1-timeline-row .v1-timeline-del {
+          opacity: 0;
+          transition: opacity 0.15s ease;
+        }
+        .v1-timeline-row:hover .v1-timeline-del { opacity: 1; }
+        .v1-timeline-del {
+          all: unset;
+          cursor: pointer;
+          width: 20px; height: 20px;
+          display: inline-flex; align-items: center; justify-content: center;
+          border-radius: 4px;
+          color: var(--kd-dim);
+          font-family: 'JetBrains Mono', ui-monospace, monospace;
+          font-size: 13px; font-weight: 700; line-height: 1;
+        }
+        .v1-timeline-del:hover { background: var(--kd-hover); color: var(--kd-danger); }
+      `}</style>
+      <div style={{ position: 'relative', paddingLeft: 4 }}>
+        <div style={{
+          position: 'absolute', left: 14, top: 10, bottom: 10, width: 2,
+          background: 'linear-gradient(var(--kd-accent-soft), var(--kd-accent) 30%, var(--kd-ink))',
+        }}/>
+        {items.map((u, i) => {
+          const isLast = i === items.length - 1;
+          const key = u.id || `${u.when}::${u.what}::${i}`;
+          return (
+            <div key={key} className="va-sans v1-timeline-row" style={{
+              position: 'relative', paddingLeft: 36,
+              padding: '6px 8px 6px 36px', borderRadius: 6, marginBottom: 4,
+              display: 'grid', gridTemplateColumns: '70px 1fr auto 22px', gap: 12,
+              alignItems: 'center',
+            }}>
+              <div style={{
+                position: 'absolute', left: 8, top: '50%', marginTop: -7,
+                width: 14, height: 14, borderRadius: '50%',
+                background: isLast ? P.ink : P.card,
+                border: '2px solid ' + (isLast ? P.ink : P.accent),
+              }}/>
+              <div className="v1-timeline-when" style={{
+                fontSize: 11, color: P.accent, fontWeight: 600, letterSpacing: 0.5,
+              }}>{u.when}</div>
+              <div className="v1-timeline-what" style={{
+                fontSize: 13, color: P.ink, fontWeight: 500,
+              }}>{u.what}</div>
+              <CategoryChip cat={u.cat} categories={categories}/>
+              {u.id && (
+                <button
+                  className="v1-timeline-del"
+                  onClick={() => removeMilestone(u.id)}
+                  title="Delete milestone"
+                  aria-label="Delete milestone"
+                >×</button>
+              )}
+              {!u.id && <span/>}
+            </div>
+          );
+        })}
+      </div>
+
+      {adding ? (
+        <div className="va-sans" style={{
+          marginTop: 14, padding: 12, borderRadius: 10,
+          border: `1px dashed ${P.lineDashed}`, background: P.drawer,
+          display: 'grid', gridTemplateColumns: '90px 1fr 130px auto', gap: 8,
+          alignItems: 'center',
+        }}>
+          <input
+            type="text" placeholder="When" value={draft.when}
+            onChange={e => setDraft(d => ({ ...d, when: e.target.value }))}
+            autoFocus
+            style={{
+              border: `1px solid ${P.lineMid}`, background: P.card,
+              padding: '6px 8px', borderRadius: 6, fontSize: 12,
+              fontFamily: 'inherit', color: P.ink, minWidth: 0,
+            }}
+          />
+          <input
+            type="text" placeholder="What" value={draft.what}
+            onChange={e => setDraft(d => ({ ...d, what: e.target.value }))}
+            onKeyDown={e => e.key === 'Enter' && addMilestone()}
+            style={{
+              border: `1px solid ${P.lineMid}`, background: P.card,
+              padding: '6px 8px', borderRadius: 6, fontSize: 12,
+              fontFamily: 'inherit', color: P.ink, minWidth: 0,
+            }}
+          />
+          <select
+            value={draft.cat}
+            onChange={e => setDraft(d => ({ ...d, cat: e.target.value }))}
+            style={{
+              border: `1px solid ${P.lineMid}`, background: P.card,
+              padding: '6px 8px', borderRadius: 6, fontSize: 12,
+              fontFamily: 'inherit', color: P.ink,
+            }}
+          >
+            {catNames.map(c => <option key={c} value={c}>{c}</option>)}
+          </select>
+          <div style={{ display: 'flex', gap: 6 }}>
+            <button onClick={addMilestone} style={{
+              border: 'none', background: P.accent, color: P.card,
+              padding: '6px 12px', borderRadius: 6, fontSize: 11,
+              fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
+            }}>Add</button>
+            <button onClick={() => { setAdding(false); setDraft({ when: '', what: '', cat: 'Personal' }); }} style={{
+              border: `1px solid ${P.lineMid}`, background: 'transparent',
+              color: P.dim, padding: '6px 10px', borderRadius: 6, fontSize: 11,
+              fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit',
+            }}>Cancel</button>
+          </div>
+        </div>
+      ) : (
+        <button
+          onClick={() => setAdding(true)}
+          className="va-sans"
+          style={{
+            marginTop: 14, marginLeft: 36,
+            border: `1px dashed ${P.lineDashed}`, background: 'transparent',
+            color: P.dim, padding: '8px 14px', borderRadius: 8,
+            fontSize: 12, fontFamily: 'inherit', fontWeight: 500,
+            cursor: 'pointer',
+          }}
+        >+ Add milestone</button>
+      )}
+    </div>
+  );
+}
+
 // ASCII-vibes light/dark toggle. Lives in the masthead. Reads/writes
 // state.ui.theme and pushes the active theme onto <html data-theme>.
 function ThemeToggle({ state, setState }) {

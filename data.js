@@ -88,6 +88,7 @@
     ui: {
       collapsed: {},
       theme: 'light',  // 'light' | 'dark'
+      seededPersonalMilestones: false,
     },
 
     // Up to 3 task ids currently "in progress". Auto-unpinned when checked off.
@@ -123,6 +124,7 @@
       Housing:     { color: '#7a4da8', bg: '#efe6f7', emoji: '\u{1F3E0}' },
       Banking:     { color: '#2b5a8a', bg: '#e1ecf7', emoji: '\u{1F3E6}' },
       Travel:      { color: '#a83d5a', bg: '#f7e1e8', emoji: '✈️' },
+      Personal:    { color: '#3a6b8a', bg: '#e3eef5', emoji: '\u{2B50}' },
     },
 
     lanes: {
@@ -149,13 +151,15 @@
     },
 
     upcoming: [
-      { when: 'May 1',  what: 'Confirm Wire 1 received',   cat: 'Financial' },
-      { when: 'May',    what: 'Send Wire 2 to CBS',        cat: 'Financial' },
-      { when: 'Jun',    what: 'Fund Fintiba account',      cat: 'Financial' },
-      { when: 'Jul',    what: 'Docs apostilled + shipped', cat: 'Visa docs' },
-      { when: 'Aug',    what: 'Visa appointment · Berlin', cat: 'Travel' },
-      { when: 'Aug',    what: 'Sign housing contract',     cat: 'Housing' },
-      { when: 'Sep 1',  what: 'Fly Köln + move-in',        cat: 'Travel' },
+      { id: 'mu-wire1', when: 'May 1',  what: 'Confirm Wire 1 received',   cat: 'Financial' },
+      { id: 'mu-wire2', when: 'May',    what: 'Send Wire 2 to CBS',        cat: 'Financial' },
+      { id: 'mp-trip',  when: 'May/Jun', what: 'Plan Germany move-in trip (Jul + Hafiz)', cat: 'Personal' },
+      { id: 'mu-fintiba', when: 'Jun',  what: 'Fund Fintiba account',      cat: 'Financial' },
+      { id: 'mu-docs',  when: 'Jul',    what: 'Docs apostilled + shipped', cat: 'Visa docs' },
+      { id: 'mu-visa',  when: 'Aug',    what: 'Visa appointment · Berlin', cat: 'Travel' },
+      { id: 'mu-housing', when: 'Aug',  what: 'Sign housing contract',     cat: 'Housing' },
+      { id: 'mp-flyout', when: 'Aug/Sep', what: 'Fly Jul + Hafiz to Köln (move-in support)', cat: 'Personal' },
+      { id: 'mu-fly',   when: 'Sep 1',  what: 'VJ flies Köln + move-in',   cat: 'Travel' },
     ],
 
     notes: {},
@@ -203,13 +207,25 @@
           const mergedSteps = DEFAULTS.blocked.steps.map(s => ({
             ...s, done: stepDoneById[s.id] !== undefined ? stepDoneById[s.id] : s.done,
           }));
+          // One-time migration: seed personal milestones (mp-* ids) into
+          // existing saved upcoming arrays. Tracked via a flag so we
+          // don't re-add them if the user explicitly deletes them.
+          const seededPersonal = !!(parsed.ui && parsed.ui.seededPersonalMilestones);
+          let mergedUpcoming = Array.isArray(parsed.upcoming) ? parsed.upcoming : DEFAULTS.upcoming;
+          if (!seededPersonal && Array.isArray(parsed.upcoming)) {
+            const haveIds = new Set(parsed.upcoming.map(u => u.id).filter(Boolean));
+            const personalDefaults = DEFAULTS.upcoming.filter(u => u.id && u.id.startsWith('mp-') && !haveIds.has(u.id));
+            mergedUpcoming = [...parsed.upcoming, ...personalDefaults];
+          }
           return { ...DEFAULTS, ...parsed,
             meta:  { ...DEFAULTS.meta,  ...(parsed.meta||{}) },
             money: { ...DEFAULTS.money, ...(parsed.money||{}) },
             lanes: { ...DEFAULTS.lanes, ...(parsed.lanes||{}) },
             blocked: { ...DEFAULTS.blocked, ...(parsed.blocked||{}), steps: mergedSteps },
             ui: { ...DEFAULTS.ui, ...(parsed.ui||{}),
-              collapsed: { ...(parsed.ui && parsed.ui.collapsed || {}) } },
+              collapsed: { ...(parsed.ui && parsed.ui.collapsed || {}) },
+              seededPersonalMilestones: true },
+            upcoming: mergedUpcoming,
             pinned: Array.isArray(parsed.pinned) ? parsed.pinned.slice(0, 3) : [],
             categories: mergedCats,
             checked: parsed.checked || {},

@@ -444,7 +444,7 @@ function VariationA({ onReset }) {
         </div>
       </Section>
 
-      {/* What's ahead — timeline only */}
+      {/* What's ahead — timeline with inline editor */}
       <Section
         id="ahead"
         title="What's ahead"
@@ -452,34 +452,7 @@ function VariationA({ onReset }) {
         headingSize={30}
         state={state} setState={setState}
       >
-        <div style={{
-          background: P.card, borderRadius: 18, padding: '22px 24px',
-          position: 'relative',
-        }}>
-          <div style={{ position: 'relative', paddingLeft: 4 }}>
-            <div style={{
-              position: 'absolute', left: 14, top: 10, bottom: 10, width: 2,
-              background: 'linear-gradient(#f4e0cb, #c14a1c 30%, #1a120a)',
-            }}/>
-            {state.upcoming.map((u, i) => (
-              <div key={i} className="va-sans v1-timeline-row" style={{
-                position: 'relative', paddingLeft: 36, marginBottom: 14,
-                display: 'grid', gridTemplateColumns: '60px 1fr auto', gap: 12,
-                alignItems: 'center',
-              }}>
-                <div style={{
-                  position: 'absolute', left: 8, top: 6, width: 14, height: 14,
-                  borderRadius: '50%',
-                  background: i === state.upcoming.length - 1 ? P.ink : P.card,
-                  border: '2px solid ' + (i === state.upcoming.length - 1 ? P.ink : P.accent),
-                }}/>
-                <div className="v1-timeline-when" style={{ fontSize: 11, color: P.accent, fontWeight: 600, letterSpacing: 0.5 }}>{u.when}</div>
-                <div className="v1-timeline-what" style={{ fontSize: 13, color: P.ink, fontWeight: 500 }}>{u.what}</div>
-                <CategoryChip cat={u.cat} categories={cats}/>
-              </div>
-            ))}
-          </div>
-        </div>
+        <MilestoneTimeline state={state} setState={setState} categories={cats}/>
       </Section>
 
       <footer className="va-sans v1-foot" style={{
