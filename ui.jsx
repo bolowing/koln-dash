@@ -678,6 +678,61 @@ function DepartureClock({ state }) {
         }
         .v1-clock > * { position: relative; z-index: 1; }
 
+        /* ASCII airplane drifting across the card — a faded watermark
+           that loops slowly so the card feels alive without distracting. */
+        .v1-clock-plane {
+          position: absolute;
+          top: 38%;
+          left: -240px;
+          z-index: 0;
+          font-family: 'JetBrains Mono', ui-monospace, monospace;
+          font-size: 11px;
+          line-height: 1.1;
+          color: var(--kd-paper);
+          opacity: 0.16;
+          white-space: pre;
+          letter-spacing: -0.5px;
+          pointer-events: none;
+          animation: kd-plane-fly 18s linear infinite;
+        }
+        @keyframes kd-plane-fly {
+          0%   { left: -240px; opacity: 0; }
+          12%  { opacity: 0.16; }
+          85%  { opacity: 0.16; }
+          100% { left: calc(100% + 40px); opacity: 0; }
+        }
+        /* Dashed runway trail behind the plane — pure CSS marching ants */
+        .v1-clock-runway {
+          position: absolute;
+          left: 18px; right: 18px; bottom: 6px;
+          height: 1px;
+          background-image: repeating-linear-gradient(
+            to right,
+            rgba(232,220,196,0.18) 0,
+            rgba(232,220,196,0.18) 6px,
+            transparent 6px,
+            transparent 12px
+          );
+          z-index: 0;
+          animation: kd-runway-drift 1.6s linear infinite;
+        }
+        @keyframes kd-runway-drift {
+          0%   { background-position: 0 0; }
+          100% { background-position: -12px 0; }
+        }
+        .v1-clock-flightno {
+          position: absolute;
+          top: 16px; right: 22px;
+          z-index: 2;
+          font-family: 'JetBrains Mono', ui-monospace, monospace;
+          font-size: 8px; letter-spacing: 1.4px; font-weight: 700;
+          color: var(--kd-paper);
+          opacity: 0.35;
+          padding: 2px 6px;
+          border: 1px dashed rgba(232,220,196,0.25);
+          border-radius: 3px;
+        }
+
         .v1-clock-eyebrow {
           display: flex; align-items: baseline; justify-content: space-between;
           font-family: 'JetBrains Mono', ui-monospace, monospace;
@@ -807,13 +862,18 @@ function DepartureClock({ state }) {
         }
       `}</style>
 
+      {/* ASCII airplane drifting left → right, low opacity */}
+      <div className="v1-clock-plane" aria-hidden="true">{`     __|__
+o--(_)--o`}</div>
+      <div className="v1-clock-runway" aria-hidden="true"/>
+      <div className="v1-clock-flightno" aria-hidden="true">[ FLT KÖLN-26 · LIVE ]</div>
+
       <div className="v1-clock-eyebrow">
         <span>
           {arrived ? 'Arrived' : 'Departure'}
           <span className="arrow">→</span>
           <span className="dest">{destination}</span>
         </span>
-        <span className="stamp">EST · LIVE</span>
       </div>
 
       <div className="v1-clock-num-row">

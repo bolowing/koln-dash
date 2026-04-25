@@ -436,10 +436,22 @@ function VariationA({ onReset }) {
         <MilestoneTimeline state={state} setState={setState} categories={cats}/>
       </Section>
 
+      {/* ASCII flight-strip — purely decorative footer ornament */}
+      <pre className="va-mono" style={{
+        marginTop: 30, marginBottom: 0,
+        fontSize: 10, color: P.dimSoft, opacity: 0.55,
+        textAlign: 'center', whiteSpace: 'pre',
+        letterSpacing: 0, lineHeight: 1.3,
+      }} aria-hidden="true">
+{`                                          __|__
+   ───────────────────────────────────o──(_)──o──────────►   K Ö L N
+                                          ‾‾‾`}
+      </pre>
+
       <footer className="va-sans v1-foot" style={{
-        marginTop: 30, paddingTop: 16,
+        marginTop: 12, paddingTop: 16,
         borderTop: `1px solid ${P.line}`,
-        fontSize: 11, color: '#9b8f7f',
+        fontSize: 11, color: P.dimSoft,
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
       }}>
         <div>Numbers and checkboxes save automatically (this browser).</div>
