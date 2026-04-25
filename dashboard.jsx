@@ -93,8 +93,8 @@ function VariationA({ onReset }) {
             state={state} setState={setState}
             items={[
               { id: 'progress', label: 'Progress' },
-              { id: 'blocked',  label: 'Blocked account' },
               { id: 'money',    label: 'Money movement' },
+              { id: 'blocked',  label: 'Blocked account' },
               { id: 'tasks',    label: 'Tasks' },
               { id: 'ahead',    label: "What's ahead" },
             ]}
@@ -244,20 +244,6 @@ function VariationA({ onReset }) {
         </div>
       </Section>
 
-      {/* Blocked account — Fintiba Sperrkonto rundown */}
-      <Section
-        id="blocked"
-        title="Blocked account"
-        subtitle="Wire once, draw €992/mo for living expenses"
-        state={state} setState={setState}
-      >
-        <div style={{
-          background: P.card, borderRadius: 18, padding: '24px 26px',
-        }}>
-          <BlockedAccount state={state} setState={setState}/>
-        </div>
-      </Section>
-
       {/* Money movement — demoted but still full-featured */}
       <Section
         id="money"
@@ -334,6 +320,20 @@ function VariationA({ onReset }) {
             padding: '10px 12px', borderRadius: 10, cursor: 'pointer',
             fontSize: 13, width: '100%', fontFamily: 'inherit', fontWeight: 500,
           }}>+ Add line item</button>
+        </div>
+      </Section>
+
+      {/* Blocked account — Fintiba Sperrkonto rundown (sub-section of Money) */}
+      <Section
+        id="blocked"
+        title="Blocked account"
+        subtitle="Wire once, draw €992/mo for living expenses"
+        state={state} setState={setState}
+      >
+        <div style={{
+          background: P.card, borderRadius: 18, padding: '24px 26px',
+        }}>
+          <BlockedAccount state={state} setState={setState}/>
         </div>
       </Section>
 
