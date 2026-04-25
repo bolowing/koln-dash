@@ -767,15 +767,51 @@ function Lane({ title, lane, visible, filterASAP, catFilter, collapsedGroups, on
   );
 }
 
+// Keyword → category guesser for quick-add. Order matters: more specific
+// patterns before general ones. Returns null if nothing matches.
+function guessCategory(text) {
+  const t = text.toLowerCase();
+  const rules = [
+    [/\b(apostille|translate|translation|cert(ificate)?|transcript|diploma|motivation|cv|jis|signature|binus|cbs|visa|appointment|videx|anabin)\b/, 'Visa docs'],
+    [/\b(wire|fund|send|pay(ment)?|invoice|tuition|merrill|fintiba|€|\$|usd|eur|idr|cash)\b/, 'Financial'],
+    [/\b(apartment|wohnung|housing|landlord|kaution|rent|miete|kalt|warm|besichtigung|sublet|wg|flat)\b/, 'Housing'],
+    [/\b(bank|account|n26|sparkasse|girokonto|iban|bic|debit|card|sim|phone|nummer|prepaid)\b/, 'Banking'],
+    [/\b(flight|fly|book|ticket|train|bahn|move-?in|trip|berlin|köln|cologne)\b/, 'Travel'],
+  ];
+  for (const [re, cat] of rules) if (re.test(t)) return cat;
+  return null;
+}
+
+// Most-common category among unchecked tasks in this lane — used as the
+// default when the user hasn't typed anything for the keyword guesser.
+function mostCommonCat(state, lane) {
+  const tasks = (state.lanes[lane] || []).filter(t => !(state.checked || {})[t.id]);
+  if (!tasks.length) return null;
+  const counts = {};
+  tasks.forEach(t => { counts[t.cat] = (counts[t.cat] || 0) + 1; });
+  return Object.entries(counts).sort((a, b) => b[1] - a[1])[0][0];
+}
+
 function QuickAddTask({ lane, state, setState, categories }) {
+  const catNames = Object.keys(categories);
+  const urgencyOptions = KD.urgencyOptions;
+  const initialCat = mostCommonCat(state, lane) || catNames[0] || 'Personal';
+
   const [text, setText] = React.useState('');
   const [expanded, setExpanded] = React.useState(false);
-  const [cat, setCat] = React.useState('Visa docs');
+  const [cat, setCat] = React.useState(initialCat);
+  const [userPickedCat, setUserPickedCat] = React.useState(false);
   const [urgency, setUrgency] = React.useState('soon');
   const [due, setDue] = React.useState('Soon');
 
-  const catNames = Object.keys(categories);
-  const urgencyOptions = KD.urgencyOptions;
+  // As text changes, auto-pick a category from keywords — but stop the
+  // auto-detect once the user explicitly clicks a category chip.
+  React.useEffect(() => {
+    if (userPickedCat) return;
+    if (!text.trim()) return;
+    const guess = guessCategory(text);
+    if (guess && categories[guess]) setCat(guess);
+  }, [text, userPickedCat]);
 
   const submit = () => {
     const trimmed = text.trim();
@@ -795,11 +831,15 @@ function QuickAddTask({ lane, state, setState, categories }) {
       return KD.logActivity(next, next.meta.currentUser || 'VJ', 'added task', trimmed);
     });
     setText('');
-    // Keep cat/urgency/due sticky for batch entry; only clear text.
+    // Re-arm the keyword guesser for the next entry.
+    setUserPickedCat(false);
   };
 
   const reset = () => {
-    setText(''); setCat('Visa docs'); setUrgency('soon'); setDue('Soon');
+    setText('');
+    setCat(mostCommonCat(state, lane) || catNames[0] || 'Personal');
+    setUserPickedCat(false);
+    setUrgency('soon'); setDue('Soon');
     setExpanded(false);
   };
 
@@ -822,6 +862,32 @@ function QuickAddTask({ lane, state, setState, categories }) {
             padding: '8px 12px', borderRadius: 10, outline: 'none',
           }}
         />
+        {/* Visible category chip — shows what the task will be filed as.
+            Click to expand the form and pick something else. */}
+        <button
+          onClick={() => setExpanded(true)}
+          title={`Category: ${cat}${userPickedCat ? '' : ' (auto)'} — click to change`}
+          style={{
+            border: `1px solid ${activeCat.color || P.lineMid}`,
+            background: activeCat.bg || 'transparent',
+            color: activeCat.color || P.dim,
+            padding: '0 10px', borderRadius: 10, cursor: 'pointer',
+            fontSize: 11, fontFamily: 'inherit', fontWeight: 600,
+            display: 'inline-flex', alignItems: 'center', gap: 4,
+            whiteSpace: 'nowrap',
+            transition: 'background 0.15s ease, border-color 0.15s ease',
+          }}
+        >
+          {activeCat.emoji && <span aria-hidden="true" style={{ fontSize: 12 }}>{activeCat.emoji}</span>}
+          <span>{cat}</span>
+          {!userPickedCat && (
+            <span className="va-mono" style={{
+              fontSize: 8, letterSpacing: 0.5, opacity: 0.65,
+              border: `1px solid currentColor`, padding: '0 3px', borderRadius: 2,
+              marginLeft: 2,
+            }}>AUTO</span>
+          )}
+        </button>
         <button
           onClick={() => setExpanded(v => !v)}
           title={expanded ? 'Collapse options' : 'Expand options'}
@@ -856,7 +922,7 @@ function QuickAddTask({ lane, state, setState, categories }) {
                 const cd = categories[c];
                 const active = cat === c;
                 return (
-                  <button key={c} onClick={() => setCat(c)} style={{
+                  <button key={c} onClick={() => { setCat(c); setUserPickedCat(true); }} style={{
                     border: '1px solid ' + (active ? cd.color : P.lineMid),
                     background: active ? cd.bg : 'transparent',
                     color: active ? cd.color : P.dimStrong,
