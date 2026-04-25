@@ -1129,22 +1129,18 @@ function AddLineDialog({ state, setState, onClose, categories }) {
 function FxCalculator({ state, setState }) {
   const fxEurUsd = state.money.fxEurUsd || 1.10;
   const fxEurIdr = state.money.fxEurIdr || 18200;
-  const [base, setBase] = React.useState('EUR');
-  const [amount, setAmount] = React.useState(1000);
+  // The single source of truth is EUR; each currency input is derived
+  // unless it's the focused one, which holds the user's typed string.
+  const [eurAmount, setEurAmount] = React.useState(1000);
+  const [focused, setFocused] = React.useState('EUR');
+  const [draft, setDraft] = React.useState('1.000');
   const [fetching, setFetching] = React.useState(false);
   const [error, setError] = React.useState(null);
 
-  const toEur = (v, cur) =>
-    cur === 'EUR' ? v : cur === 'USD' ? v / fxEurUsd : v / fxEurIdr;
   const fromEur = (eur, cur) =>
     cur === 'EUR' ? eur : cur === 'USD' ? eur * fxEurUsd : eur * fxEurIdr;
-
-  const eurEquiv = toEur(amount, base);
-  const vals = {
-    EUR: fromEur(eurEquiv, 'EUR'),
-    USD: fromEur(eurEquiv, 'USD'),
-    IDR: fromEur(eurEquiv, 'IDR'),
-  };
+  const toEur = (v, cur) =>
+    cur === 'EUR' ? v : cur === 'USD' ? v / fxEurUsd : v / fxEurIdr;
 
   const refresh = async () => {
     setFetching(true); setError(null);
@@ -1170,98 +1166,202 @@ function FxCalculator({ state, setState }) {
   };
 
   const currencies = [
-    { key: 'EUR', label: 'EUR', symbol: '€' },
-    { key: 'USD', label: 'USD', symbol: '$' },
-    { key: 'IDR', label: 'IDR', symbol: 'Rp' },
+    { key: 'EUR', symbol: '€',  flag: '🇪🇺', locale: 'de-DE' },
+    { key: 'USD', symbol: '$',  flag: '🇺🇸', locale: 'en-US' },
+    { key: 'IDR', symbol: 'Rp', flag: '🇮🇩', locale: 'id-ID' },
   ];
 
-  const localeFor = (cur) => cur === 'IDR' ? 'id-ID' : cur === 'EUR' ? 'de-DE' : 'en-US';
-  const fmt = (cur, v) => v.toLocaleString(localeFor(cur), { maximumFractionDigits: cur === 'IDR' ? 0 : 0 });
+  const fmt = (cur, v) => {
+    const c = currencies.find(x => x.key === cur);
+    return v.toLocaleString(c.locale, { maximumFractionDigits: 0 });
+  };
 
-  const baseSym = currencies.find(c => c.key === base).symbol;
-  const inputValue = vals[base].toLocaleString(localeFor(base), { maximumFractionDigits: 0 });
-  const other = currencies.filter(c => c.key !== base);
+  // Quick-amount chips — adapt unit to the currency being typed in.
+  const quickChips = (cur) => cur === 'IDR'
+    ? [100000, 1000000, 5000000, 10000000]
+    : [100, 1000, 5000, 10000];
+
+  // Locale-aware parser: EUR (de-DE) uses '.' as thousands separator
+  // and ',' as decimal; USD/IDR use the inverse. parseFloat alone gets
+  // de-DE wrong ("1.000" → 1 instead of 1000).
+  const parseLocalized = (raw, cur) => {
+    const cleaned = raw.replace(/[^\d.,-]/g, '');
+    if (cur === 'EUR') {
+      return parseFloat(cleaned.replace(/\./g, '').replace(',', '.')) || 0;
+    }
+    return parseFloat(cleaned.replace(/,/g, '')) || 0;
+  };
+
+  const setFromInput = (cur, raw) => {
+    setDraft(raw);
+    setEurAmount(toEur(parseLocalized(raw, cur), cur));
+  };
+
+  const setQuick = (cur, val) => {
+    setEurAmount(toEur(val, cur));
+    setFocused(cur);
+    setDraft(fmt(cur, val));
+  };
 
   return (
     <div className="v1-fx-card" style={{
-      background: P.accentSoft, borderRadius: 18, padding: '18px 22px',
+      background: P.card,
+      border: `1px solid ${P.lineMid}`,
+      borderRadius: 18, padding: '16px 18px 14px',
       display: 'flex', flexDirection: 'column', gap: 10, minHeight: 0,
+      position: 'relative', overflow: 'hidden',
     }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div className="va-mono" style={{
-          fontSize: 10, letterSpacing: 2, textTransform: 'uppercase', color: P.accent,
-        }}>FX calculator</div>
-        <div className="va-sans" style={{
-          display: 'flex', gap: 2, background: 'rgba(138,90,43,0.12)',
-          borderRadius: 999, padding: 2,
-        }}>
-          {currencies.map(c => (
-            <button key={c.key} onClick={() => setBase(c.key)} style={{
-              border: 'none',
-              background: base === c.key ? P.ink : 'transparent',
-              color: base === c.key ? P.card : P.accent,
-              padding: '3px 10px', borderRadius: 999,
-              fontSize: 10, fontWeight: 600, cursor: 'pointer',
-              fontFamily: 'inherit', letterSpacing: 0.3,
-            }}>{c.label}</button>
-          ))}
-        </div>
-      </div>
+      <style>{`
+        .v1-fx-card::before {
+          content: "";
+          position: absolute; inset: 0;
+          background:
+            radial-gradient(120% 80% at 100% 0%, var(--kd-accent-soft) 0%, transparent 55%);
+          opacity: 0.6;
+          pointer-events: none;
+        }
+        .v1-fx-row {
+          position: relative;
+          display: grid;
+          grid-template-columns: 26px 36px 1fr auto;
+          align-items: center;
+          gap: 10px;
+          padding: 8px 4px;
+          border-bottom: 1px solid var(--kd-line-soft);
+          transition: background 0.15s ease;
+        }
+        .v1-fx-row:last-of-type { border-bottom: none; }
+        .v1-fx-row.is-active::before {
+          content: "";
+          position: absolute;
+          left: -18px; top: 6px; bottom: 6px;
+          width: 3px;
+          background: var(--kd-accent);
+          border-radius: 2px;
+          box-shadow: 0 0 10px var(--kd-accent-soft);
+        }
+        .v1-fx-flag {
+          font-size: 18px; line-height: 1;
+          filter: saturate(0.9);
+        }
+        .v1-fx-code {
+          font-family: 'JetBrains Mono', ui-monospace, monospace;
+          font-size: 10px; letter-spacing: 1.4px; font-weight: 700;
+          color: var(--kd-dim);
+          text-transform: uppercase;
+        }
+        .v1-fx-row.is-active .v1-fx-code { color: var(--kd-accent); }
+        .v1-fx-input {
+          all: unset;
+          width: 100%;
+          font-family: 'Bricolage Grotesque', system-ui, sans-serif;
+          font-size: 22px; line-height: 1.05; letter-spacing: -0.5px;
+          color: var(--kd-dim-strong);
+          font-weight: 400;
+          cursor: text;
+        }
+        .v1-fx-row.is-active .v1-fx-input {
+          color: var(--kd-ink);
+          font-weight: 500;
+        }
+        .v1-fx-symbol {
+          font-family: 'Bricolage Grotesque', system-ui, sans-serif;
+          font-size: 16px; color: var(--kd-dim);
+          font-weight: 400;
+          text-align: right;
+          padding-right: 4px;
+        }
+        .v1-fx-row.is-active .v1-fx-symbol {
+          color: var(--kd-accent);
+          font-weight: 500;
+        }
+        .v1-fx-chips {
+          display: flex; gap: 4px; flex-wrap: wrap;
+          margin-top: 6px;
+        }
+        .v1-fx-chip {
+          all: unset;
+          cursor: pointer;
+          font-family: 'JetBrains Mono', ui-monospace, monospace;
+          font-size: 10px; letter-spacing: 0.5px; font-weight: 600;
+          color: var(--kd-dim);
+          padding: 3px 8px;
+          border-radius: 999px;
+          border: 1px solid var(--kd-line-mid);
+          background: var(--kd-card);
+          transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+        }
+        .v1-fx-chip:hover {
+          background: var(--kd-accent);
+          color: var(--kd-card);
+          border-color: var(--kd-accent);
+        }
+      `}</style>
 
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
-        <span className="va-sans" style={{ fontSize: 16, color: P.accent, fontWeight: 500 }}>{baseSym}</span>
-        <input
-          className="v1-large-input"
-          type="text" size={1} inputMode="decimal"
-          value={inputValue}
-          onChange={e => {
-            const raw = e.target.value.replace(/[^\d.-]/g, '');
-            setAmount(parseFloat(raw) || 0);
-          }}
-          onFocus={e => e.target.select()}
-          style={{
-            flex: 1, minWidth: 0, width: 0,
-            border: 'none', background: 'transparent', outline: 'none',
-            fontSize: 38, fontWeight: 400, letterSpacing: -1, color: P.ink,
-            fontFamily: "'Bricolage Grotesque', system-ui, sans-serif", padding: 0,
-            lineHeight: 1.1,
-          }}
-        />
-      </div>
-
-      <div className="va-sans" style={{
-        display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6,
-        fontSize: 12, color: P.dimStrong,
+      <div style={{
+        display: 'flex', justifyContent: 'space-between', alignItems: 'baseline',
+        gap: 8, position: 'relative',
       }}>
-        {other.map(c => (
-          <div key={c.key} style={{
-            display: 'flex', alignItems: 'baseline', gap: 4, minWidth: 0,
-          }}>
-            <span style={{ color: P.accent, fontWeight: 700, fontSize: 10, letterSpacing: 1 }}>{c.label}</span>
-            <span style={{
-              fontSize: 13, color: P.ink, fontWeight: 500,
-              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-            }}>{c.symbol} {fmt(c.key, vals[c.key])}</span>
-          </div>
+        <div className="va-mono" style={{
+          fontSize: 10, letterSpacing: 2, textTransform: 'uppercase',
+          color: P.accent, fontWeight: 700,
+        }}>FX · Rate board</div>
+        <button onClick={refresh} disabled={fetching} style={{
+          border: `1px solid ${error ? P.danger : P.lineMid}`,
+          background: 'transparent',
+          color: error ? P.danger : P.dim,
+          cursor: fetching ? 'wait' : 'pointer',
+          fontSize: 9, fontWeight: 700, letterSpacing: 1,
+          fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+          textTransform: 'uppercase',
+          padding: '3px 8px', borderRadius: 999, whiteSpace: 'nowrap',
+        }}>
+          {fetching ? '↻ updating…' : error ? '⚠ retry' : `↻ ${timeAgo()}`}
+        </button>
+      </div>
+
+      <div style={{ position: 'relative' }}>
+        {currencies.map(c => {
+          const isActive = focused === c.key;
+          const value = isActive ? draft : fmt(c.key, fromEur(eurAmount, c.key));
+          return (
+            <div key={c.key} className={`v1-fx-row ${isActive ? 'is-active' : ''}`}>
+              <span className="v1-fx-flag" aria-hidden="true">{c.flag}</span>
+              <span className="v1-fx-code">{c.key}</span>
+              <input
+                className="v1-fx-input v1-large-input"
+                type="text" inputMode="decimal"
+                value={value}
+                onFocus={(e) => {
+                  setFocused(c.key);
+                  setDraft(fmt(c.key, fromEur(eurAmount, c.key)));
+                  setTimeout(() => e.target.select(), 0);
+                }}
+                onChange={(e) => setFromInput(c.key, e.target.value)}
+              />
+              <span className="v1-fx-symbol">{c.symbol}</span>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="v1-fx-chips">
+        {quickChips(focused).map(v => (
+          <button key={v} className="v1-fx-chip" onClick={() => setQuick(focused, v)}>
+            {currencies.find(x => x.key === focused).symbol}{fmt(focused, v)}
+          </button>
         ))}
       </div>
 
-      <div className="va-sans" style={{
-        marginTop: 'auto', paddingTop: 8,
-        borderTop: '1px dashed rgba(138,90,43,0.3)',
-        fontSize: 10, color: P.accent,
-        display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8,
+      <div className="va-mono" style={{
+        marginTop: 2, paddingTop: 8,
+        borderTop: `1px dashed ${P.lineSoft}`,
+        fontSize: 9, letterSpacing: 1, color: P.dim,
+        textTransform: 'uppercase', fontWeight: 600,
+        display: 'flex', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap',
       }}>
-        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          €1 = ${fxEurUsd.toFixed(2)} · Rp {Math.round(fxEurIdr).toLocaleString('id-ID')}
-        </span>
-        <button onClick={refresh} disabled={fetching} style={{
-          border: 'none', background: 'transparent',
-          color: error ? P.danger : P.accent,
-          cursor: fetching ? 'wait' : 'pointer',
-          fontSize: 10, fontWeight: 600, fontFamily: 'inherit',
-          padding: 0, textDecoration: 'underline', whiteSpace: 'nowrap',
-        }}>{fetching ? 'updating…' : error ? 'offline · retry' : timeAgo()}</button>
+        <span>€1 = ${fxEurUsd.toFixed(4)}</span>
+        <span>€1 = Rp {Math.round(fxEurIdr).toLocaleString('id-ID')}</span>
       </div>
     </div>
   );
