@@ -8,7 +8,6 @@ function VariationA({ onReset }) {
   const [openTask, setOpenTask] = React.useState(null);
   const [openLineId, setOpenLineId] = React.useState(null);
   const [showAddLine, setShowAddLine] = React.useState(false);
-  const [addTaskLane, setAddTaskLane] = React.useState(null);
   const [tab, setTab] = React.useState('all');
   const [catFilter, setCatFilter] = React.useState(null);
   const [collapsedGroups, setCollapsedGroups] = React.useState({});
@@ -36,8 +35,6 @@ function VariationA({ onReset }) {
 
   const setCurrentUser = (u) =>
     setState(s => ({ ...s, meta: { ...s.meta, currentUser: u } }));
-
-  const addTask = (lane) => setAddTaskLane(lane);
 
   const openTaskById = (taskId, lane) => {
     const t = state.lanes[lane]?.find(x => x.id === taskId);
@@ -423,7 +420,6 @@ function VariationA({ onReset }) {
             onToggleGroup={toggleGroup}
             state={state} setState={setState}
             onOpen={(t) => setOpenTask({ task: t, lane: 'VJ' })}
-            onAdd={() => addTask('VJ')}
             onToggle={toggleCheck}
             onTogglePin={togglePin}
             categories={cats}
@@ -444,7 +440,7 @@ function VariationA({ onReset }) {
         </div>
       </Section>
 
-      {/* What's ahead — timeline only */}
+      {/* What's ahead — timeline with inline editor */}
       <Section
         id="ahead"
         title="What's ahead"
@@ -452,34 +448,7 @@ function VariationA({ onReset }) {
         headingSize={30}
         state={state} setState={setState}
       >
-        <div style={{
-          background: P.card, borderRadius: 18, padding: '22px 24px',
-          position: 'relative',
-        }}>
-          <div style={{ position: 'relative', paddingLeft: 4 }}>
-            <div style={{
-              position: 'absolute', left: 14, top: 10, bottom: 10, width: 2,
-              background: 'linear-gradient(#f4e0cb, #c14a1c 30%, #1a120a)',
-            }}/>
-            {state.upcoming.map((u, i) => (
-              <div key={i} className="va-sans v1-timeline-row" style={{
-                position: 'relative', paddingLeft: 36, marginBottom: 14,
-                display: 'grid', gridTemplateColumns: '60px 1fr auto', gap: 12,
-                alignItems: 'center',
-              }}>
-                <div style={{
-                  position: 'absolute', left: 8, top: 6, width: 14, height: 14,
-                  borderRadius: '50%',
-                  background: i === state.upcoming.length - 1 ? P.ink : P.card,
-                  border: '2px solid ' + (i === state.upcoming.length - 1 ? P.ink : P.accent),
-                }}/>
-                <div className="v1-timeline-when" style={{ fontSize: 11, color: P.accent, fontWeight: 600, letterSpacing: 0.5 }}>{u.when}</div>
-                <div className="v1-timeline-what" style={{ fontSize: 13, color: P.ink, fontWeight: 500 }}>{u.what}</div>
-                <CategoryChip cat={u.cat} categories={cats}/>
-              </div>
-            ))}
-          </div>
-        </div>
+        <MilestoneTimeline state={state} setState={setState} categories={cats}/>
       </Section>
 
       <footer className="va-sans v1-foot" style={{
@@ -527,14 +496,6 @@ function VariationA({ onReset }) {
         />
       )}
 
-      {addTaskLane && (
-        <AddTaskDialog
-          lane={addTaskLane}
-          state={state} setState={setState}
-          onClose={() => setAddTaskLane(null)}
-          categories={cats}
-        />
-      )}
         </div>
       </div>
     </div>
@@ -801,13 +762,57 @@ function Lane({ title, lane, visible, filterASAP, catFilter, collapsedGroups, on
         );
       })}
 
-      <QuickAddTask lane={lane} setState={setState} onMore={onAdd}/>
+      <QuickAddTask lane={lane} state={state} setState={setState} categories={categories}/>
     </div>
   );
 }
 
-function QuickAddTask({ lane, setState, onMore }) {
+// Keyword → category guesser for quick-add. Order matters: more specific
+// patterns before general ones. Returns null if nothing matches.
+function guessCategory(text) {
+  const t = text.toLowerCase();
+  const rules = [
+    [/\b(apostille|translate|translation|cert(ificate)?|transcript|diploma|motivation|cv|jis|signature|binus|cbs|visa|appointment|videx|anabin)\b/, 'Visa docs'],
+    [/\b(wire|fund|send|pay(ment)?|invoice|tuition|merrill|fintiba|€|\$|usd|eur|idr|cash)\b/, 'Financial'],
+    [/\b(apartment|wohnung|housing|landlord|kaution|rent|miete|kalt|warm|besichtigung|sublet|wg|flat)\b/, 'Housing'],
+    [/\b(bank|account|n26|sparkasse|girokonto|iban|bic|debit|card|sim|phone|nummer|prepaid)\b/, 'Banking'],
+    [/\b(flight|fly|book|ticket|train|bahn|move-?in|trip|berlin|köln|cologne)\b/, 'Travel'],
+  ];
+  for (const [re, cat] of rules) if (re.test(t)) return cat;
+  return null;
+}
+
+// Most-common category among unchecked tasks in this lane — used as the
+// default when the user hasn't typed anything for the keyword guesser.
+function mostCommonCat(state, lane) {
+  const tasks = (state.lanes[lane] || []).filter(t => !(state.checked || {})[t.id]);
+  if (!tasks.length) return null;
+  const counts = {};
+  tasks.forEach(t => { counts[t.cat] = (counts[t.cat] || 0) + 1; });
+  return Object.entries(counts).sort((a, b) => b[1] - a[1])[0][0];
+}
+
+function QuickAddTask({ lane, state, setState, categories }) {
+  const catNames = Object.keys(categories);
+  const urgencyOptions = KD.urgencyOptions;
+  const initialCat = mostCommonCat(state, lane) || catNames[0] || 'Personal';
+
   const [text, setText] = React.useState('');
+  const [expanded, setExpanded] = React.useState(false);
+  const [cat, setCat] = React.useState(initialCat);
+  const [userPickedCat, setUserPickedCat] = React.useState(false);
+  const [urgency, setUrgency] = React.useState('soon');
+  const [due, setDue] = React.useState('Soon');
+
+  // As text changes, auto-pick a category from keywords — but stop the
+  // auto-detect once the user explicitly clicks a category chip.
+  React.useEffect(() => {
+    if (userPickedCat) return;
+    if (!text.trim()) return;
+    const guess = guessCategory(text);
+    if (guess && categories[guess]) setCat(guess);
+  }, [text, userPickedCat]);
+
   const submit = () => {
     const trimmed = text.trim();
     if (!trimmed) return;
@@ -819,33 +824,187 @@ function QuickAddTask({ lane, setState, onMore }) {
           ...s.lanes,
           [lane]: [...s.lanes[lane], {
             id: taskId, text: trimmed,
-            cat: 'Visa docs', due: 'TBD', urgency: 'soon',
+            cat, due: due.trim() || 'TBD', urgency,
           }],
         },
       };
       return KD.logActivity(next, next.meta.currentUser || 'VJ', 'added task', trimmed);
     });
     setText('');
+    // Re-arm the keyword guesser for the next entry.
+    setUserPickedCat(false);
   };
+
+  const reset = () => {
+    setText('');
+    setCat(mostCommonCat(state, lane) || catNames[0] || 'Personal');
+    setUserPickedCat(false);
+    setUrgency('soon'); setDue('Soon');
+    setExpanded(false);
+  };
+
+  const activeCat = categories[cat] || { color: P.dim, bg: P.lineSoft };
+
   return (
-    <div className="va-sans" style={{
-      marginTop: 10, display: 'flex', gap: 6, alignItems: 'stretch',
-    }}>
-      <input
-        value={text} onChange={e => setText(e.target.value)}
-        onKeyDown={e => { if (e.key === 'Enter') submit(); }}
-        placeholder={`+ Quick add to ${lane}'s lane…`}
-        style={{
-          flex: 1, border: `1px dashed ${P.lineDashed}`, background: 'transparent',
-          color: P.ink, fontFamily: 'inherit', fontSize: 13,
-          padding: '8px 12px', borderRadius: 10, outline: 'none',
-        }}
-      />
-      <button onClick={onMore} title="More options" style={{
-        border: `1px dashed ${P.lineDashed}`, background: 'transparent',
-        color: P.dim, padding: '0 12px', borderRadius: 10, cursor: 'pointer',
-        fontSize: 14, fontFamily: 'inherit', fontWeight: 500,
-      }}>⋯</button>
+    <div className="va-sans" style={{ marginTop: 10 }}>
+      <div style={{ display: 'flex', gap: 6, alignItems: 'stretch' }}>
+        <input
+          value={text} onChange={e => setText(e.target.value)}
+          onKeyDown={e => {
+            if (e.key === 'Enter') submit();
+            if (e.key === 'Escape') reset();
+          }}
+          placeholder={`+ Quick add to ${lane}'s lane…`}
+          style={{
+            flex: 1, minWidth: 0,
+            border: `1px dashed ${P.lineDashed}`, background: 'transparent',
+            color: P.ink, fontFamily: 'inherit', fontSize: 13,
+            padding: '8px 12px', borderRadius: 10, outline: 'none',
+          }}
+        />
+        {/* Visible category chip — shows what the task will be filed as.
+            Click to expand the form and pick something else. */}
+        <button
+          onClick={() => setExpanded(true)}
+          title={`Category: ${cat}${userPickedCat ? '' : ' (auto)'} — click to change`}
+          style={{
+            border: `1px solid ${activeCat.color || P.lineMid}`,
+            background: activeCat.bg || 'transparent',
+            color: activeCat.color || P.dim,
+            padding: '0 10px', borderRadius: 10, cursor: 'pointer',
+            fontSize: 11, fontFamily: 'inherit', fontWeight: 600,
+            display: 'inline-flex', alignItems: 'center', gap: 4,
+            whiteSpace: 'nowrap',
+            transition: 'background 0.15s ease, border-color 0.15s ease',
+          }}
+        >
+          {activeCat.emoji && <span aria-hidden="true" style={{ fontSize: 12 }}>{activeCat.emoji}</span>}
+          <span>{cat}</span>
+          {!userPickedCat && (
+            <span className="va-mono" style={{
+              fontSize: 8, letterSpacing: 0.5, opacity: 0.65,
+              border: `1px solid currentColor`, padding: '0 3px', borderRadius: 2,
+              marginLeft: 2,
+            }}>AUTO</span>
+          )}
+        </button>
+        <button
+          onClick={() => setExpanded(v => !v)}
+          title={expanded ? 'Collapse options' : 'Expand options'}
+          aria-label="Toggle options"
+          style={{
+            border: `1px dashed ${P.lineDashed}`,
+            background: expanded ? P.accentSoft : 'transparent',
+            color: expanded ? P.accent : P.dim,
+            padding: '0 12px', borderRadius: 10, cursor: 'pointer',
+            fontSize: 12, fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+            fontWeight: 700, letterSpacing: 0.5,
+            transition: 'background 0.15s ease, color 0.15s ease',
+          }}
+        >{expanded ? '▴' : '▾'}</button>
+      </div>
+
+      {expanded && (
+        <div style={{
+          marginTop: 8, padding: '12px 14px',
+          border: `1px dashed ${P.lineDashed}`, borderRadius: 10,
+          background: P.drawer,
+          display: 'flex', flexDirection: 'column', gap: 10,
+        }}>
+          {/* Category chips */}
+          <div>
+            <div className="va-mono" style={{
+              fontSize: 9, letterSpacing: 1.5, textTransform: 'uppercase',
+              color: P.dim, fontWeight: 700, marginBottom: 6,
+            }}>Category</div>
+            <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+              {catNames.map(c => {
+                const cd = categories[c];
+                const active = cat === c;
+                return (
+                  <button key={c} onClick={() => { setCat(c); setUserPickedCat(true); }} style={{
+                    border: '1px solid ' + (active ? cd.color : P.lineMid),
+                    background: active ? cd.bg : 'transparent',
+                    color: active ? cd.color : P.dimStrong,
+                    padding: '3px 9px', borderRadius: 999,
+                    fontSize: 11, fontWeight: 600, fontFamily: 'inherit',
+                    cursor: 'pointer',
+                    display: 'inline-flex', alignItems: 'center', gap: 4,
+                    transition: 'background 0.15s ease, color 0.15s ease, border-color 0.15s ease',
+                  }}>{cd.emoji && <span aria-hidden="true">{cd.emoji}</span>}{c}</button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Urgency + due in a row */}
+          <div style={{
+            display: 'grid', gridTemplateColumns: '1fr 130px', gap: 10,
+            alignItems: 'end',
+          }}>
+            <div>
+              <div className="va-mono" style={{
+                fontSize: 9, letterSpacing: 1.5, textTransform: 'uppercase',
+                color: P.dim, fontWeight: 700, marginBottom: 6,
+              }}>Urgency</div>
+              <div style={{ display: 'flex', gap: 4 }}>
+                {urgencyOptions.map(u => {
+                  const active = urgency === u.key;
+                  return (
+                    <button key={u.key} onClick={() => setUrgency(u.key)} style={{
+                      border: '1px solid ' + (active ? u.color : P.lineMid),
+                      background: active ? u.color : 'transparent',
+                      color: active ? P.card : u.color,
+                      padding: '3px 10px', borderRadius: 999,
+                      fontSize: 11, fontWeight: 600, fontFamily: 'inherit',
+                      cursor: 'pointer',
+                      transition: 'background 0.15s ease, color 0.15s ease',
+                    }}>{u.label}</button>
+                  );
+                })}
+              </div>
+            </div>
+            <div>
+              <div className="va-mono" style={{
+                fontSize: 9, letterSpacing: 1.5, textTransform: 'uppercase',
+                color: P.dim, fontWeight: 700, marginBottom: 6,
+              }}>Due</div>
+              <input
+                value={due} onChange={e => setDue(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') submit(); }}
+                placeholder="e.g. May 1, ASAP, TBD"
+                style={{
+                  width: '100%', minWidth: 0,
+                  border: `1px solid ${P.lineMid}`, background: P.card,
+                  color: P.ink, fontFamily: 'inherit', fontSize: 12,
+                  padding: '5px 9px', borderRadius: 6, outline: 'none',
+                }}
+              />
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 6 }}>
+            <button onClick={reset} style={{
+              border: `1px solid ${P.lineMid}`, background: 'transparent',
+              color: P.dim, padding: '5px 12px', borderRadius: 6, fontSize: 11,
+              fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit',
+            }}>Reset</button>
+            <button onClick={submit} disabled={!text.trim()} style={{
+              border: 'none',
+              background: text.trim() ? P.accent : P.lineMid,
+              color: P.card, padding: '5px 14px', borderRadius: 6,
+              fontSize: 11, fontWeight: 600, fontFamily: 'inherit',
+              cursor: text.trim() ? 'pointer' : 'not-allowed',
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+            }}>
+              <span aria-hidden="true" style={{
+                fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+              }}>↵</span>
+              Add to {lane}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -1156,22 +1315,18 @@ function AddLineDialog({ state, setState, onClose, categories }) {
 function FxCalculator({ state, setState }) {
   const fxEurUsd = state.money.fxEurUsd || 1.10;
   const fxEurIdr = state.money.fxEurIdr || 18200;
-  const [base, setBase] = React.useState('EUR');
-  const [amount, setAmount] = React.useState(1000);
+  // The single source of truth is EUR; each currency input is derived
+  // unless it's the focused one, which holds the user's typed string.
+  const [eurAmount, setEurAmount] = React.useState(1000);
+  const [focused, setFocused] = React.useState('EUR');
+  const [draft, setDraft] = React.useState('1.000');
   const [fetching, setFetching] = React.useState(false);
   const [error, setError] = React.useState(null);
 
-  const toEur = (v, cur) =>
-    cur === 'EUR' ? v : cur === 'USD' ? v / fxEurUsd : v / fxEurIdr;
   const fromEur = (eur, cur) =>
     cur === 'EUR' ? eur : cur === 'USD' ? eur * fxEurUsd : eur * fxEurIdr;
-
-  const eurEquiv = toEur(amount, base);
-  const vals = {
-    EUR: fromEur(eurEquiv, 'EUR'),
-    USD: fromEur(eurEquiv, 'USD'),
-    IDR: fromEur(eurEquiv, 'IDR'),
-  };
+  const toEur = (v, cur) =>
+    cur === 'EUR' ? v : cur === 'USD' ? v / fxEurUsd : v / fxEurIdr;
 
   const refresh = async () => {
     setFetching(true); setError(null);
@@ -1197,294 +1352,227 @@ function FxCalculator({ state, setState }) {
   };
 
   const currencies = [
-    { key: 'EUR', label: 'EUR', symbol: '€' },
-    { key: 'USD', label: 'USD', symbol: '$' },
-    { key: 'IDR', label: 'IDR', symbol: 'Rp' },
+    { key: 'EUR', symbol: '€',  flag: '🇪🇺', locale: 'de-DE' },
+    { key: 'USD', symbol: '$',  flag: '🇺🇸', locale: 'en-US' },
+    { key: 'IDR', symbol: 'Rp', flag: '🇮🇩', locale: 'id-ID' },
   ];
 
-  const localeFor = (cur) => cur === 'IDR' ? 'id-ID' : cur === 'EUR' ? 'de-DE' : 'en-US';
-  const fmt = (cur, v) => v.toLocaleString(localeFor(cur), { maximumFractionDigits: cur === 'IDR' ? 0 : 0 });
+  const fmt = (cur, v) => {
+    const c = currencies.find(x => x.key === cur);
+    return v.toLocaleString(c.locale, { maximumFractionDigits: 0 });
+  };
 
-  const baseSym = currencies.find(c => c.key === base).symbol;
-  const inputValue = vals[base].toLocaleString(localeFor(base), { maximumFractionDigits: 0 });
-  const other = currencies.filter(c => c.key !== base);
+  // Quick-amount chips — adapt unit to the currency being typed in.
+  const quickChips = (cur) => cur === 'IDR'
+    ? [100000, 1000000, 5000000, 10000000]
+    : [100, 1000, 5000, 10000];
 
-  return (
-    <div className="v1-fx-card" style={{
-      background: P.accentSoft, borderRadius: 18, padding: '18px 22px',
-      display: 'flex', flexDirection: 'column', gap: 10, minHeight: 0,
-    }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div className="va-mono" style={{
-          fontSize: 10, letterSpacing: 2, textTransform: 'uppercase', color: P.accent,
-        }}>FX calculator</div>
-        <div className="va-sans" style={{
-          display: 'flex', gap: 2, background: 'rgba(138,90,43,0.12)',
-          borderRadius: 999, padding: 2,
-        }}>
-          {currencies.map(c => (
-            <button key={c.key} onClick={() => setBase(c.key)} style={{
-              border: 'none',
-              background: base === c.key ? P.ink : 'transparent',
-              color: base === c.key ? P.card : P.accent,
-              padding: '3px 10px', borderRadius: 999,
-              fontSize: 10, fontWeight: 600, cursor: 'pointer',
-              fontFamily: 'inherit', letterSpacing: 0.3,
-            }}>{c.label}</button>
-          ))}
-        </div>
-      </div>
+  // Locale-aware parser: EUR (de-DE) uses '.' as thousands separator
+  // and ',' as decimal; USD/IDR use the inverse. parseFloat alone gets
+  // de-DE wrong ("1.000" → 1 instead of 1000).
+  const parseLocalized = (raw, cur) => {
+    const cleaned = raw.replace(/[^\d.,-]/g, '');
+    if (cur === 'EUR') {
+      return parseFloat(cleaned.replace(/\./g, '').replace(',', '.')) || 0;
+    }
+    return parseFloat(cleaned.replace(/,/g, '')) || 0;
+  };
 
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
-        <span className="va-sans" style={{ fontSize: 16, color: P.accent, fontWeight: 500 }}>{baseSym}</span>
-        <input
-          className="v1-large-input"
-          type="text" size={1} inputMode="decimal"
-          value={inputValue}
-          onChange={e => {
-            const raw = e.target.value.replace(/[^\d.-]/g, '');
-            setAmount(parseFloat(raw) || 0);
-          }}
-          onFocus={e => e.target.select()}
-          style={{
-            flex: 1, minWidth: 0, width: 0,
-            border: 'none', background: 'transparent', outline: 'none',
-            fontSize: 38, fontWeight: 400, letterSpacing: -1, color: P.ink,
-            fontFamily: "'Bricolage Grotesque', system-ui, sans-serif", padding: 0,
-            lineHeight: 1.1,
-          }}
-        />
-      </div>
+  const setFromInput = (cur, raw) => {
+    setDraft(raw);
+    setEurAmount(toEur(parseLocalized(raw, cur), cur));
+  };
 
-      <div className="va-sans" style={{
-        display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6,
-        fontSize: 12, color: P.dimStrong,
-      }}>
-        {other.map(c => (
-          <div key={c.key} style={{
-            display: 'flex', alignItems: 'baseline', gap: 4, minWidth: 0,
-          }}>
-            <span style={{ color: P.accent, fontWeight: 700, fontSize: 10, letterSpacing: 1 }}>{c.label}</span>
-            <span style={{
-              fontSize: 13, color: P.ink, fontWeight: 500,
-              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-            }}>{c.symbol} {fmt(c.key, vals[c.key])}</span>
-          </div>
-        ))}
-      </div>
-
-      <div className="va-sans" style={{
-        marginTop: 'auto', paddingTop: 8,
-        borderTop: '1px dashed rgba(138,90,43,0.3)',
-        fontSize: 10, color: P.accent,
-        display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8,
-      }}>
-        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          €1 = ${fxEurUsd.toFixed(2)} · Rp {Math.round(fxEurIdr).toLocaleString('id-ID')}
-        </span>
-        <button onClick={refresh} disabled={fetching} style={{
-          border: 'none', background: 'transparent',
-          color: error ? P.danger : P.accent,
-          cursor: fetching ? 'wait' : 'pointer',
-          fontSize: 10, fontWeight: 600, fontFamily: 'inherit',
-          padding: 0, textDecoration: 'underline', whiteSpace: 'nowrap',
-        }}>{fetching ? 'updating…' : error ? 'offline · retry' : timeAgo()}</button>
-      </div>
-    </div>
-  );
-}
-
-function AddTaskDialog({ lane, state, setState, onClose, categories }) {
-  const [text, setText] = React.useState('');
-  const [cat, setCat] = React.useState('Visa docs');
-  const [due, setDue] = React.useState('Soon');
-  const [urgency, setUrgency] = React.useState('soon');
-  const [alsoLine, setAlsoLine] = React.useState(false);
-  const [amount, setAmount] = React.useState(0);
-  const [lineStatus, setLineStatus] = React.useState('pending');
-
-  const catNames = Object.keys(categories);
-  const urgencyOptions = KD.urgencyOptions;
-  const statusOptions = KD.statusOptions;
-
-  const create = () => {
-    if (!text.trim()) return;
-    const taskId = 'x' + Date.now();
-    setState(s => {
-      let next = {
-        ...s,
-        lanes: {
-          ...s.lanes,
-          [lane]: [...s.lanes[lane], {
-            id: taskId, text: text.trim(),
-            cat, due: due.trim() || 'TBD', urgency,
-          }],
-        },
-      };
-      if (alsoLine) {
-        const lineId = 'm-' + Date.now();
-        next = {
-          ...next,
-          money: {
-            ...next.money,
-            lines: [...next.money.lines, {
-              id: lineId, label: text.trim(),
-              amountEUR: Number(amount) || 0,
-              status: lineStatus, note: '',
-              taskIds: [taskId],
-            }],
-          },
-        };
-      }
-      return KD.logActivity(next, next.meta.currentUser || 'VJ', 'added task', text.trim());
-    });
-    onClose();
+  const setQuick = (cur, val) => {
+    setEurAmount(toEur(val, cur));
+    setFocused(cur);
+    setDraft(fmt(cur, val));
   };
 
   return (
-    <div style={{
-      position: 'fixed', inset: 0, zIndex: 60,
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      background: P.overlayStrong, backdropFilter: 'blur(3px)',
-    }} onClick={onClose}>
-      <div className="v1-dialog" onClick={e => e.stopPropagation()} style={{
-        width: 480, maxWidth: '94%', background: P.drawer,
-        borderRadius: 16, padding: '22px 24px',
-        display: 'flex', flexDirection: 'column', gap: 14,
-        boxShadow: '0 20px 60px rgba(0,0,0,0.25)',
-        fontFamily: 'Inter, sans-serif',
+    <div className="v1-fx-card" style={{
+      background: P.card,
+      border: `1px solid ${P.lineMid}`,
+      borderRadius: 18, padding: '16px 18px 14px',
+      display: 'flex', flexDirection: 'column', gap: 10, minHeight: 0,
+      position: 'relative', overflow: 'hidden',
+    }}>
+      <style>{`
+        .v1-fx-card::before {
+          content: "";
+          position: absolute; inset: 0;
+          background:
+            radial-gradient(120% 80% at 100% 0%, var(--kd-accent-soft) 0%, transparent 55%);
+          opacity: 0.6;
+          pointer-events: none;
+        }
+        .v1-fx-row {
+          position: relative;
+          display: grid;
+          grid-template-columns: 26px 36px 1fr auto;
+          align-items: center;
+          gap: 10px;
+          padding: 8px 4px;
+          border-bottom: 1px solid var(--kd-line-soft);
+          transition: background 0.15s ease;
+        }
+        .v1-fx-row:last-of-type { border-bottom: none; }
+        .v1-fx-row.is-active::before {
+          content: "";
+          position: absolute;
+          left: -18px; top: 6px; bottom: 6px;
+          width: 3px;
+          background: var(--kd-accent);
+          border-radius: 2px;
+          box-shadow: 0 0 10px var(--kd-accent-soft);
+        }
+        .v1-fx-flag {
+          font-size: 18px; line-height: 1;
+          filter: saturate(0.9);
+        }
+        .v1-fx-code {
+          font-family: 'JetBrains Mono', ui-monospace, monospace;
+          font-size: 10px; letter-spacing: 1.4px; font-weight: 700;
+          color: var(--kd-dim);
+          text-transform: uppercase;
+        }
+        .v1-fx-row.is-active .v1-fx-code { color: var(--kd-accent); }
+        .v1-fx-input {
+          all: unset;
+          width: 100%;
+          font-family: 'Bricolage Grotesque', system-ui, sans-serif;
+          font-size: 22px; line-height: 1.05; letter-spacing: -0.5px;
+          color: var(--kd-dim-strong);
+          font-weight: 400;
+          cursor: text;
+        }
+        .v1-fx-row.is-active .v1-fx-input {
+          color: var(--kd-ink);
+          font-weight: 500;
+        }
+        .v1-fx-symbol {
+          font-family: 'Bricolage Grotesque', system-ui, sans-serif;
+          font-size: 16px; color: var(--kd-dim);
+          font-weight: 400;
+          text-align: right;
+          padding-right: 4px;
+        }
+        .v1-fx-row.is-active .v1-fx-symbol {
+          color: var(--kd-accent);
+          font-weight: 500;
+        }
+        .v1-fx-chips {
+          display: flex; gap: 4px; flex-wrap: wrap;
+          margin-top: 6px;
+        }
+        .v1-fx-chip {
+          all: unset;
+          cursor: pointer;
+          font-family: 'JetBrains Mono', ui-monospace, monospace;
+          font-size: 10px; letter-spacing: 0.5px; font-weight: 600;
+          color: var(--kd-dim);
+          padding: 3px 8px;
+          border-radius: 999px;
+          border: 1px solid var(--kd-line-mid);
+          background: var(--kd-card);
+          transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+        }
+        .v1-fx-chip:hover {
+          background: var(--kd-accent);
+          color: var(--kd-card);
+          border-color: var(--kd-accent);
+        }
+      `}</style>
+
+      <div style={{
+        display: 'flex', justifyContent: 'space-between', alignItems: 'baseline',
+        gap: 8, position: 'relative',
       }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-          <div>
-            <div style={{ fontSize: 10, letterSpacing: 0.8, color: P.dim, textTransform: 'uppercase' }}>
-              {lane}'s lane
-            </div>
-            <div style={{
-              fontSize: 22, fontWeight: 500, marginTop: 2,
-              fontFamily: "'Bricolage Grotesque', system-ui, sans-serif",
-            }}>Add task</div>
-          </div>
-          <button onClick={onClose} style={{
-            border: 'none', background: 'transparent', fontSize: 20,
-            cursor: 'pointer', color: P.dim, padding: 0, lineHeight: 1,
-          }}>×</button>
-        </div>
-
-        <div>
-          <FieldLabel>Task</FieldLabel>
-          <input autoFocus value={text} onChange={e => setText(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter') create(); }}
-            placeholder="e.g. Book Germany trip with Hafiz"
-            style={fieldStyle()}/>
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-          <div>
-            <FieldLabel>Due</FieldLabel>
-            <input value={due} onChange={e => setDue(e.target.value)}
-              style={fieldStyle()}/>
-          </div>
-          <div>
-            <FieldLabel>Urgency</FieldLabel>
-            <div style={{ display: 'flex', gap: 5 }}>
-              {urgencyOptions.map(u => {
-                const active = urgency === u.key;
-                return (
-                  <button key={u.key} onClick={() => setUrgency(u.key)} style={{
-                    border: '1px solid ' + (active ? u.color : P.lineStrong),
-                    background: active ? u.color : P.card,
-                    color: active ? P.card : u.color,
-                    padding: '6px 10px', borderRadius: 999,
-                    fontSize: 11, fontWeight: 600, cursor: 'pointer',
-                    fontFamily: 'inherit', flex: 1,
-                  }}>{u.label}</button>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-
-        <div>
-          <FieldLabel>Category</FieldLabel>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
-            {catNames.map(c => {
-              const col = categories[c]; const active = cat === c;
-              return (
-                <button key={c} onClick={() => setCat(c)} style={{
-                  border: '1px solid ' + (active ? col.color : 'transparent'),
-                  background: active ? col.color : col.bg,
-                  color: active ? P.card : col.color,
-                  padding: '4px 11px', borderRadius: 4,
-                  fontSize: 11, fontWeight: 600, cursor: 'pointer',
-                  fontFamily: 'inherit',
-                }}>{c}</button>
-              );
-            })}
-          </div>
-        </div>
-
-        <label style={{
-          display: 'flex', alignItems: 'center', gap: 10,
-          padding: '10px 12px', borderRadius: 10,
-          background: alsoLine ? P.accentSoft : P.card,
-          border: '1px solid ' + (alsoLine ? '#e0cfa8' : P.line),
-          cursor: 'pointer', fontSize: 13,
+        <div className="va-mono" style={{
+          fontSize: 10, letterSpacing: 2, textTransform: 'uppercase',
+          color: P.accent, fontWeight: 700,
+        }}>FX · Rate board</div>
+        <button onClick={refresh} disabled={fetching} style={{
+          border: `1px solid ${error ? P.danger : P.lineMid}`,
+          background: 'transparent',
+          color: error ? P.danger : P.dim,
+          cursor: fetching ? 'wait' : 'pointer',
+          fontSize: 9, fontWeight: 700, letterSpacing: 1,
+          fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+          textTransform: 'uppercase',
+          padding: '3px 8px', borderRadius: 999, whiteSpace: 'nowrap',
         }}>
-          <input type="checkbox" checked={alsoLine}
-            onChange={e => setAlsoLine(e.target.checked)}
-            style={{ width: 16, height: 16, accentColor: P.accent }}/>
-          <span style={{ color: P.ink, fontWeight: 500 }}>
-            Also create a linked budget line
-          </span>
-        </label>
+          {fetching ? '↻ updating…' : error ? '⚠ retry' : `↻ ${timeAgo()}`}
+        </button>
+      </div>
 
-        {alsoLine && (
-          <div style={{
-            padding: 12, background: P.card, borderRadius: 10,
-            border: `1px solid ${P.line}`,
-            display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10,
-          }}>
-            <div>
-              <FieldLabel>Amount (EUR)</FieldLabel>
-              <input type="number" value={amount}
-                onChange={e => setAmount(e.target.value)}
-                style={fieldStyle()}/>
+      <div style={{ position: 'relative' }}>
+        {currencies.map(c => {
+          const isActive = focused === c.key;
+          const value = isActive ? draft : fmt(c.key, fromEur(eurAmount, c.key));
+          return (
+            <div key={c.key} className={`v1-fx-row ${isActive ? 'is-active' : ''}`}>
+              <span className="v1-fx-flag" aria-hidden="true">{c.flag}</span>
+              <span className="v1-fx-code">{c.key}</span>
+              <input
+                className="v1-fx-input v1-large-input"
+                type="text" inputMode="decimal"
+                value={value}
+                onFocus={(e) => {
+                  setFocused(c.key);
+                  setDraft(fmt(c.key, fromEur(eurAmount, c.key)));
+                  setTimeout(() => e.target.select(), 0);
+                }}
+                onChange={(e) => setFromInput(c.key, e.target.value)}
+              />
+              <span className="v1-fx-symbol">{c.symbol}</span>
             </div>
-            <div>
-              <FieldLabel>Status</FieldLabel>
-              <div style={{ display: 'flex', gap: 5 }}>
-                {statusOptions.map(s => {
-                  const active = lineStatus === s.key;
-                  return (
-                    <button key={s.key} onClick={() => setLineStatus(s.key)} style={{
-                      border: '1px solid ' + (active ? s.color : P.lineStrong),
-                      background: active ? s.color : P.card,
-                      color: active ? P.card : s.color,
-                      padding: '6px 8px', borderRadius: 999,
-                      fontSize: 11, fontWeight: 600, cursor: 'pointer',
-                      fontFamily: 'inherit', flex: 1,
-                    }}>{s.label}</button>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-        )}
+          );
+        })}
+      </div>
 
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 4 }}>
-          <button onClick={onClose} style={{
-            border: 'none', background: 'transparent', color: P.dim,
-            padding: '8px 14px', borderRadius: 8, fontSize: 12,
-            cursor: 'pointer', fontFamily: 'inherit', fontWeight: 500,
-          }}>Cancel</button>
-          <button onClick={create} disabled={!text.trim()} style={{
-            background: text.trim() ? P.ink : 'rgba(24,20,15,0.3)',
-            color: P.card, border: 'none',
-            padding: '8px 16px', borderRadius: 8, fontSize: 12,
-            fontWeight: 600, cursor: text.trim() ? 'pointer' : 'not-allowed',
-            fontFamily: 'inherit',
-          }}>Create</button>
-        </div>
+      <div className="v1-fx-chips">
+        {quickChips(focused).map(v => (
+          <button key={v} className="v1-fx-chip" onClick={() => setQuick(focused, v)}>
+            {currencies.find(x => x.key === focused).symbol}{fmt(focused, v)}
+          </button>
+        ))}
+      </div>
+
+      <div className="va-mono" style={{
+        marginTop: 2, paddingTop: 8,
+        borderTop: `1px dashed ${P.lineSoft}`,
+        fontSize: 9, letterSpacing: 1, color: P.dim,
+        textTransform: 'uppercase', fontWeight: 600,
+        display: 'flex', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap',
+      }}>
+        <span>€1 = ${fxEurUsd.toFixed(4)}</span>
+        <span>€1 = Rp {Math.round(fxEurIdr).toLocaleString('id-ID')}</span>
+      </div>
+
+      <div className="va-mono" style={{
+        marginTop: 6,
+        fontSize: 9, letterSpacing: 1, color: P.dimSoft,
+        textTransform: 'uppercase', fontWeight: 600,
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        gap: 8, flexWrap: 'wrap',
+      }}>
+        <a
+          href="https://open.er-api.com/v6/latest/EUR"
+          target="_blank" rel="noopener noreferrer"
+          style={{ color: P.dimSoft, textDecoration: 'none', borderBottom: `1px dashed ${P.lineMid}` }}
+          title="Open the raw rate JSON in a new tab"
+        >via open.er-api.com</a>
+        <a
+          href={`https://www.google.com/finance/quote/EUR-${focused === 'EUR' ? 'USD' : focused}`}
+          target="_blank" rel="noopener noreferrer"
+          style={{
+            color: P.accent, textDecoration: 'none',
+            border: `1px solid ${P.lineMid}`, borderRadius: 999,
+            padding: '2px 8px', fontWeight: 700,
+          }}
+          title="Spot-check on Google Finance"
+        >📈 Google</a>
       </div>
     </div>
   );

@@ -420,6 +420,19 @@ function OverallProgress({ state }) {
           transition: background 0.15s, color 0.15s;
         }
         .kd-bubble-btn:hover { background: ${P.accent}; color: #fff; border-color: ${P.accent}; }
+        /* Bubble tracks the dude on desktop, but at narrow widths the
+           bubble width approaches the container width — overflows past
+           the left edge. Pin centered on mobile. */
+        .kd-dude-bubble {
+          left: var(--kd-bubble-left, 50%);
+        }
+        .kd-dude-pointer {
+          left: var(--kd-pointer-left, 50%);
+        }
+        @media (max-width: 720px) {
+          .kd-dude-bubble  { left: 50% !important; width: min(320px, 96%) !important; }
+          .kd-dude-pointer { left: 50% !important; }
+        }
       `}</style>
 
       <div style={{
@@ -439,15 +452,18 @@ function OverallProgress({ state }) {
 
       <div style={{ position: 'relative', minHeight: 168, paddingTop: showTip ? 132 : 108 }}>
         {/* Speech bubble — wider, multi-line, interactive */}
-        <div key={cycle} style={{
-          position: 'absolute',
-          left: `${bubblePos}%`,
-          top: 0,
-          transform: 'translateX(-50%)',
-          width: 'min(360px, 92%)',
-          animation: 'kd-bubble-in 0.35s ease',
-          zIndex: 3,
-        }}>
+        <div
+          key={cycle}
+          className="kd-dude-bubble"
+          style={{
+            position: 'absolute',
+            ['--kd-bubble-left']: `${bubblePos}%`,
+            top: 0,
+            transform: 'translateX(-50%)',
+            width: 'min(360px, 92%)',
+            animation: 'kd-bubble-in 0.35s ease',
+            zIndex: 3,
+          }}>
           <div className="va-sans" style={{
             position: 'relative',
             background: P.card,
@@ -519,16 +535,18 @@ function OverallProgress({ state }) {
               </div>
             )}
             {/* Pointer */}
-            <div style={{
-              position: 'absolute',
-              left: `${Math.max(8, Math.min(92, 50 + (dudePos - bubblePos)))}%`,
-              bottom: -6,
-              transform: 'translateX(-50%) rotate(45deg)',
-              width: 10, height: 10,
-              background: P.card,
-              borderRight: `1px solid ${P.lineMid}`,
-              borderBottom: `1px solid ${P.lineMid}`,
-            }}/>
+            <div
+              className="kd-dude-pointer"
+              style={{
+                position: 'absolute',
+                ['--kd-pointer-left']: `${Math.max(8, Math.min(92, 50 + (dudePos - bubblePos)))}%`,
+                bottom: -6,
+                transform: 'translateX(-50%) rotate(45deg)',
+                width: 10, height: 10,
+                background: P.card,
+                borderRight: `1px solid ${P.lineMid}`,
+                borderBottom: `1px solid ${P.lineMid}`,
+              }}/>
           </div>
         </div>
 
@@ -573,56 +591,201 @@ function OverallProgress({ state }) {
   );
 }
 
-// ASCII-vibes light/dark toggle. Lives in the masthead. Reads/writes
-// state.ui.theme and pushes the active theme onto <html data-theme>.
+// "What's ahead" timeline with inline add/delete editor.
+function MilestoneTimeline({ state, setState, categories }) {
+  const items = Array.isArray(state.upcoming) ? state.upcoming : [];
+  const [adding, setAdding] = React.useState(false);
+  const [draft, setDraft] = React.useState({ when: '', what: '', cat: 'Personal' });
+
+  const catNames = Object.keys(categories);
+
+  const addMilestone = () => {
+    const when = draft.when.trim();
+    const what = draft.what.trim();
+    if (!when || !what) return;
+    const id = 'mu-' + Date.now();
+    setState(s => ({
+      ...s,
+      upcoming: [...(s.upcoming || []), { id, when, what, cat: draft.cat }],
+    }));
+    setDraft({ when: '', what: '', cat: 'Personal' });
+    setAdding(false);
+  };
+
+  const removeMilestone = (id) => {
+    setState(s => ({
+      ...s,
+      upcoming: (s.upcoming || []).filter(u => u.id !== id),
+    }));
+  };
+
+  return (
+    <div style={{
+      background: P.card, borderRadius: 18, padding: '22px 24px',
+      position: 'relative',
+    }}>
+      <style>{`
+        .v1-timeline-row { transition: background 0.12s ease; }
+        .v1-timeline-row:hover { background: var(--kd-hover); }
+        .v1-timeline-row .v1-timeline-del {
+          opacity: 0;
+          transition: opacity 0.15s ease;
+        }
+        .v1-timeline-row:hover .v1-timeline-del { opacity: 1; }
+        .v1-timeline-del {
+          all: unset;
+          cursor: pointer;
+          width: 20px; height: 20px;
+          display: inline-flex; align-items: center; justify-content: center;
+          border-radius: 4px;
+          color: var(--kd-dim);
+          font-family: 'JetBrains Mono', ui-monospace, monospace;
+          font-size: 13px; font-weight: 700; line-height: 1;
+        }
+        .v1-timeline-del:hover { background: var(--kd-hover); color: var(--kd-danger); }
+      `}</style>
+      <div style={{ position: 'relative', paddingLeft: 4 }}>
+        <div style={{
+          position: 'absolute', left: 14, top: 10, bottom: 10, width: 2,
+          background: 'linear-gradient(var(--kd-accent-soft), var(--kd-accent) 30%, var(--kd-ink))',
+        }}/>
+        {items.map((u, i) => {
+          const isLast = i === items.length - 1;
+          const key = u.id || `${u.when}::${u.what}::${i}`;
+          return (
+            <div key={key} className="va-sans v1-timeline-row" style={{
+              position: 'relative', paddingLeft: 36,
+              padding: '6px 8px 6px 36px', borderRadius: 6, marginBottom: 4,
+              display: 'grid', gridTemplateColumns: '70px 1fr auto 22px', gap: 12,
+              alignItems: 'center',
+            }}>
+              <div style={{
+                position: 'absolute', left: 8, top: '50%', marginTop: -7,
+                width: 14, height: 14, borderRadius: '50%',
+                background: isLast ? P.ink : P.card,
+                border: '2px solid ' + (isLast ? P.ink : P.accent),
+              }}/>
+              <div className="v1-timeline-when" style={{
+                fontSize: 11, color: P.accent, fontWeight: 600, letterSpacing: 0.5,
+              }}>{u.when}</div>
+              <div className="v1-timeline-what" style={{
+                fontSize: 13, color: P.ink, fontWeight: 500,
+              }}>{u.what}</div>
+              <CategoryChip cat={u.cat} categories={categories}/>
+              {u.id && (
+                <button
+                  className="v1-timeline-del"
+                  onClick={() => removeMilestone(u.id)}
+                  title="Delete milestone"
+                  aria-label="Delete milestone"
+                >×</button>
+              )}
+              {!u.id && <span/>}
+            </div>
+          );
+        })}
+      </div>
+
+      {adding ? (
+        <div className="va-sans v1-milestone-form" style={{
+          marginTop: 14, padding: 12, borderRadius: 10,
+          border: `1px dashed ${P.lineDashed}`, background: P.drawer,
+          display: 'grid', gridTemplateColumns: '90px 1fr 130px auto', gap: 8,
+          alignItems: 'center',
+        }}>
+          <input
+            type="text" placeholder="When" value={draft.when}
+            onChange={e => setDraft(d => ({ ...d, when: e.target.value }))}
+            autoFocus
+            style={{
+              border: `1px solid ${P.lineMid}`, background: P.card,
+              padding: '6px 8px', borderRadius: 6, fontSize: 12,
+              fontFamily: 'inherit', color: P.ink, minWidth: 0,
+            }}
+          />
+          <input
+            type="text" placeholder="What" value={draft.what}
+            onChange={e => setDraft(d => ({ ...d, what: e.target.value }))}
+            onKeyDown={e => e.key === 'Enter' && addMilestone()}
+            style={{
+              border: `1px solid ${P.lineMid}`, background: P.card,
+              padding: '6px 8px', borderRadius: 6, fontSize: 12,
+              fontFamily: 'inherit', color: P.ink, minWidth: 0,
+            }}
+          />
+          <select
+            value={draft.cat}
+            onChange={e => setDraft(d => ({ ...d, cat: e.target.value }))}
+            style={{
+              border: `1px solid ${P.lineMid}`, background: P.card,
+              padding: '6px 8px', borderRadius: 6, fontSize: 12,
+              fontFamily: 'inherit', color: P.ink,
+            }}
+          >
+            {catNames.map(c => <option key={c} value={c}>{c}</option>)}
+          </select>
+          <div style={{ display: 'flex', gap: 6 }}>
+            <button onClick={addMilestone} style={{
+              border: 'none', background: P.accent, color: P.card,
+              padding: '6px 12px', borderRadius: 6, fontSize: 11,
+              fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
+            }}>Add</button>
+            <button onClick={() => { setAdding(false); setDraft({ when: '', what: '', cat: 'Personal' }); }} style={{
+              border: `1px solid ${P.lineMid}`, background: 'transparent',
+              color: P.dim, padding: '6px 10px', borderRadius: 6, fontSize: 11,
+              fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit',
+            }}>Cancel</button>
+          </div>
+        </div>
+      ) : (
+        <button
+          onClick={() => setAdding(true)}
+          className="va-sans"
+          style={{
+            marginTop: 14, marginLeft: 36,
+            border: `1px dashed ${P.lineDashed}`, background: 'transparent',
+            color: P.dim, padding: '8px 14px', borderRadius: 8,
+            fontSize: 12, fontFamily: 'inherit', fontWeight: 500,
+            cursor: 'pointer',
+          }}
+        >+ Add milestone</button>
+      )}
+    </div>
+  );
+}
+
+// Single-icon light/dark toggle. Shows the icon you'd switch TO —
+// click ☾ to go dark, ☀ to go light.
 function ThemeToggle({ state, setState }) {
   const theme = (state.ui && state.ui.theme) || 'light';
   React.useEffect(() => {
     document.documentElement.dataset.theme = theme;
   }, [theme]);
-  const setTheme = (t) => setState(s => ({
-    ...s, ui: { ...s.ui, theme: t },
-  }));
-  const segStyle = (active) => ({
-    cursor: 'pointer',
-    background: active ? P.accent : 'transparent',
-    color: active ? P.card : P.dim,
-    border: 'none',
-    padding: '4px 9px',
-    font: 'inherit',
-    fontFamily: "'JetBrains Mono', ui-monospace, monospace",
-    fontSize: 10,
-    letterSpacing: 1.4,
-    textTransform: 'uppercase',
-    fontWeight: 700,
-    transition: 'background 0.18s ease, color 0.18s ease',
-  });
+  const next = theme === 'light' ? 'dark' : 'light';
+  const icon = next === 'dark' ? '☾' : '☀';
+  const toggle = () => setState(s => ({ ...s, ui: { ...s.ui, theme: next } }));
   return (
-    <div className="va-mono" style={{
-      display: 'inline-flex', alignItems: 'center',
-      border: `1px solid ${P.lineMid}`,
-      borderRadius: 4, overflow: 'hidden',
-      background: P.card,
-      boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
-    }}>
-      <span aria-hidden="true" style={{
-        padding: '4px 6px 4px 8px', color: P.dimSoft,
-        fontFamily: "'JetBrains Mono', ui-monospace, monospace",
-        fontSize: 10, letterSpacing: 1,
-      }}>[</span>
-      <button onClick={() => setTheme('light')} style={segStyle(theme === 'light')} title="Light theme">
-        {theme === 'light' ? '☀ SUN' : 'SUN'}
-      </button>
-      <span aria-hidden="true" style={{ color: P.dimSoft, padding: '4px 1px', fontSize: 10 }}>·</span>
-      <button onClick={() => setTheme('dark')} style={segStyle(theme === 'dark')} title="Dark theme">
-        {theme === 'dark' ? '☾ MOON' : 'MOON'}
-      </button>
-      <span aria-hidden="true" style={{
-        padding: '4px 8px 4px 6px', color: P.dimSoft,
-        fontFamily: "'JetBrains Mono', ui-monospace, monospace",
-        fontSize: 10, letterSpacing: 1,
-      }}>]</span>
-    </div>
+    <button
+      onClick={toggle}
+      title={next === 'dark' ? 'Switch to dark' : 'Switch to light'}
+      aria-label={next === 'dark' ? 'Switch to dark mode' : 'Switch to light mode'}
+      style={{
+        cursor: 'pointer',
+        width: 30, height: 30,
+        border: `1px solid ${P.lineMid}`,
+        borderRadius: 999,
+        background: P.card,
+        color: P.dimStrong,
+        fontSize: 15, lineHeight: 1,
+        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+        boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
+        transition: 'background 0.18s ease, color 0.18s ease, transform 0.18s ease',
+      }}
+      onMouseEnter={e => { e.currentTarget.style.background = P.hover; e.currentTarget.style.color = P.accent; }}
+      onMouseLeave={e => { e.currentTarget.style.background = P.card;  e.currentTarget.style.color = P.dimStrong; }}
+    >
+      <span aria-hidden="true">{icon}</span>
+    </button>
   );
 }
 
@@ -1006,7 +1169,7 @@ function BlockedAccount({ state, setState }) {
       </div>
 
       {/* Flow diagram */}
-      <div style={{
+      <div className="v1-blocked-flow" style={{
         display: 'grid',
         gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
         gap: 10, marginBottom: 22,
@@ -1053,7 +1216,7 @@ function BlockedAccount({ state, setState }) {
             <span style={{ color: P.dim }}>€{remainingEUR.toLocaleString('de-DE')} to come</span>
           </div>
         </div>
-        <div style={{
+        <div className="v1-blocked-months" style={{
           display: 'grid',
           gridTemplateColumns: `repeat(${months}, minmax(0, 1fr))`,
           gap: 4,
@@ -1088,7 +1251,7 @@ function BlockedAccount({ state, setState }) {
       </div>
 
       {/* Two-column: facts + checklist */}
-      <div style={{
+      <div className="v1-blocked-facts" style={{
         display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 22,
       }}>
         <div>
