@@ -703,153 +703,754 @@ function MiniMonth({ year, month, milestones, today, departureKey, onPick }) {
   );
 }
 
-// Embedded Köln map — uses Google Maps' no-key share-iframe URL.
-// User can switch between saved place pins (school / Dom / etc.) or
-// edit the active pin's query inline to recenter.
+// =============================================================================
+// KÖLN MAP — "Cartographer's Field Station"
+// =============================================================================
+// Aesthetic: vintage travel logbook page. Pins are catalog-card index
+// entries with numbered prefixes; the active pin gets a paper readout
+// panel with click-to-edit name + query, DMS coordinates, and
+// distance-to-CBS. The map itself sits in a framed container with
+// corner registration brackets (⌜⌝⌞⌟). Toolbar lets you switch map
+// type (map/sat/hybrid/terrain), toggle walking directions to CBS,
+// and bump the zoom level — all by rebuilding the iframe URL with no
+// Google API key required.
+//
+// Coordinates for known Köln places live in KD_COORDS — used for the
+// distance readout and DMS display. If a place's query doesn't match
+// any known coords, the readout strip shows an em-dash and Δ-CBS is
+// hidden. User-added pins simply join the saved-pins list.
+// =============================================================================
+
+const KD_COORDS = {
+  // school (treated as the origin for distance readouts)
+  'cologne business school': [50.9277, 6.9457],
+  'cbs cologne business school': [50.9277, 6.9457],
+  'cbs köln': [50.9277, 6.9457],
+  // landmarks
+  'kölner dom': [50.9413, 6.9583],
+  'köln dom': [50.9413, 6.9583],
+  'cologne cathedral': [50.9413, 6.9583],
+  'köln hauptbahnhof': [50.9430, 6.9590],
+  'köln hbf': [50.9430, 6.9590],
+  'rhein, köln': [50.9375, 6.9603],
+  'rhine, köln': [50.9375, 6.9603],
+  'stadtgarten, köln': [50.9430, 6.9341],
+  // neighborhoods
+  'belgisches viertel': [50.9420, 6.9290],
+  'sülz, köln': [50.9202, 6.9197],
+  'ehrenfeld, köln': [50.9529, 6.9230],
+  'lindenthal, köln': [50.9286, 6.9143],
+  'südstadt, köln': [50.9215, 6.9485],
+  // services
+  'ikea köln am butzweilerhof': [50.9871, 6.8765],
+  'ikea köln': [50.9871, 6.8765],
+  'aldi süd köln': [50.9367, 6.9560],
+  // bureaucracy (Bürgeramt Innenstadt is the central registration office)
+  'bürgeramt innenstadt köln': [50.9408, 6.9580],
+};
+
+const KD_CBS_COORDS = KD_COORDS['cologne business school'];
+const KD_CBS_QUERY = 'Cologne Business School, Köln, Germany';
+
+const KD_QUICK_JUMPS = [
+  { emoji: '🚉', label: 'Hbf',         query: 'Köln Hauptbahnhof, Germany' },
+  { emoji: '⛪', label: 'Dom',         query: 'Kölner Dom, Köln, Germany' },
+  { emoji: '🌊', label: 'Rhein',       query: 'Rhein, Köln, Germany' },
+  { emoji: '🏛',  label: 'Bürgeramt',   query: 'Bürgeramt Innenstadt Köln, Germany' },
+  { emoji: '🛒', label: 'IKEA',        query: 'IKEA Köln Am Butzweilerhof, Germany' },
+  { emoji: '🛍', label: 'Aldi',        query: 'Aldi Süd, Köln, Germany' },
+  { emoji: '🌳', label: 'Stadtgarten', query: 'Stadtgarten, Köln, Germany' },
+];
+
+const KD_MAP_TYPES = [
+  { key: 'm', label: 'MAP'     },
+  { key: 'k', label: 'SAT'     },
+  { key: 'h', label: 'HYBRID'  },
+  { key: 'p', label: 'TERRAIN' },
+];
+
+function kdLookupCoords(query) {
+  const q = (query || '').toLowerCase().trim();
+  if (!q) return null;
+  if (KD_COORDS[q]) return KD_COORDS[q];
+  for (const [key, coords] of Object.entries(KD_COORDS)) {
+    if (q.includes(key) || key.includes(q)) return coords;
+  }
+  return null;
+}
+
+function kdHaversineKm(a, b) {
+  const R = 6371;
+  const toRad = (d) => (d * Math.PI) / 180;
+  const dLat = toRad(b[0] - a[0]);
+  const dLng = toRad(b[1] - a[1]);
+  const lat1 = toRad(a[0]);
+  const lat2 = toRad(b[0]);
+  const x = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(x));
+}
+
+function kdFormatDMS(deg, isLat) {
+  const dir = isLat ? (deg >= 0 ? 'N' : 'S') : (deg >= 0 ? 'E' : 'W');
+  const abs = Math.abs(deg);
+  const d = Math.floor(abs);
+  const m = Math.floor((abs - d) * 60);
+  const s = Math.round((abs - d - m / 60) * 3600);
+  return `${d}°${String(m).padStart(2, '0')}′${String(s).padStart(2, '0')}″${dir}`;
+}
+
 function KolnMap({ state, setState }) {
-  const map = state.map || { activeIdx: 0, places: [] };
-  const places = Array.isArray(map.places) ? map.places : [];
+  const map = state.map || {};
+  const places   = Array.isArray(map.places) ? map.places : [];
   const activeIdx = Math.min(Math.max(0, map.activeIdx || 0), Math.max(0, places.length - 1));
-  const active = places[activeIdx];
+  const active   = places[activeIdx];
+  const mapType  = map.mapType || 'm';
+  const zoom     = typeof map.zoom === 'number' ? map.zoom : 14;
+  const showRoute = !!map.showRoute;
 
-  const updateMap = (patch) => setState(s => ({ ...s, map: { ...s.map, ...patch } }));
+  const updateMap = (patch) => setState((s) => ({ ...s, map: { ...s.map, ...patch } }));
+  const updatePlaceField = (field, value) => updateMap({
+    places: places.map((p, i) => (i === activeIdx ? { ...p, [field]: value } : p)),
+  });
 
-  const setActiveIdx = (i) => updateMap({ activeIdx: i });
-  const updateActiveQuery = (q) => updateMap({
-    places: places.map((p, i) => i === activeIdx ? { ...p, query: q } : p),
-  });
-  const updateActiveLabel = (l) => updateMap({
-    places: places.map((p, i) => i === activeIdx ? { ...p, label: l } : p),
-  });
-  const addPlace = () => updateMap({
-    places: [...places, { id: 'p-' + Date.now(), label: 'New pin', query: 'Köln, Germany' }],
-    activeIdx: places.length,
-  });
+  const setActiveIdx = (i) => updateMap({ activeIdx: i, showRoute: false });
+
+  // Quick-jump click: if a saved pin already matches that query, switch
+  // to it; otherwise add a new one and switch.
+  const jumpTo = (q) => {
+    const existingIdx = places.findIndex(
+      (p) => (p.query || '').toLowerCase().trim() === q.query.toLowerCase().trim()
+    );
+    if (existingIdx >= 0) {
+      updateMap({ activeIdx: existingIdx, showRoute: false });
+    } else {
+      const np = { id: 'p-' + Date.now(), label: q.label, query: q.query };
+      updateMap({ places: [...places, np], activeIdx: places.length, showRoute: false });
+    }
+  };
+
+  const addBlankPlace = () => {
+    const np = { id: 'p-' + Date.now(), label: 'New pin', query: 'Köln, Germany' };
+    updateMap({ places: [...places, np], activeIdx: places.length, showRoute: false });
+  };
+
   const removeActive = () => {
     if (places.length <= 1) return;
     updateMap({
       places: places.filter((_, i) => i !== activeIdx),
       activeIdx: Math.max(0, activeIdx - 1),
+      showRoute: false,
     });
   };
 
+  const coords = active ? kdLookupCoords(active.query) : null;
+  const distKm = coords ? kdHaversineKm(coords, KD_CBS_COORDS) : null;
+  const isAtCBS = coords && coords[0] === KD_CBS_COORDS[0] && coords[1] === KD_CBS_COORDS[1];
+
   const query = active ? active.query : 'Köln, Germany';
-  const src = `https://www.google.com/maps?q=${encodeURIComponent(query)}&z=14&output=embed`;
-  const openLink = `https://www.google.com/maps?q=${encodeURIComponent(query)}`;
+  const src = (showRoute && !isAtCBS)
+    ? `https://www.google.com/maps?saddr=${encodeURIComponent(query)}&daddr=${encodeURIComponent(KD_CBS_QUERY)}&dirflg=w&output=embed`
+    : `https://www.google.com/maps?q=${encodeURIComponent(query)}&z=${zoom}&t=${mapType}&output=embed`;
+  const openInMaps = `https://www.google.com/maps?q=${encodeURIComponent(query)}`;
 
   return (
-    <div style={{
-      background: P.card, borderRadius: 18, padding: '20px 22px',
-      display: 'flex', flexDirection: 'column', gap: 12,
-    }}>
-      {/* Pin tabs + add */}
-      <div style={{
-        display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap',
-      }}>
+    <div className="v1-map-station">
+      <style>{`
+        .v1-map-station {
+          position: relative;
+          background:
+            radial-gradient(140% 90% at 100% 0%, var(--kd-accent-soft) 0%, transparent 55%),
+            var(--kd-card);
+          border-radius: 18px;
+          padding: 22px 24px 20px;
+          overflow: hidden;
+        }
+        .v1-map-station::before {
+          content: "";
+          position: absolute; inset: 0;
+          pointer-events: none;
+          background-image:
+            radial-gradient(var(--kd-line) 1px, transparent 1px);
+          background-size: 14px 14px;
+          opacity: 0.35;
+        }
+        .v1-map-station > * { position: relative; z-index: 1; }
+        .v1-map-eyebrow {
+          display: flex; align-items: baseline; justify-content: space-between;
+          gap: 12px; margin-bottom: 12px;
+          font-family: 'JetBrains Mono', ui-monospace, monospace;
+          font-size: 9px; letter-spacing: 2.4px; font-weight: 700;
+          text-transform: uppercase;
+          color: var(--kd-accent);
+        }
+        .v1-map-eyebrow .station-id {
+          color: var(--kd-dim-soft);
+          font-weight: 600;
+          letter-spacing: 1.6px;
+        }
+        .v1-map-eyebrow .compass {
+          color: var(--kd-accent);
+          font-size: 13px;
+          line-height: 1;
+          letter-spacing: 0;
+          margin-right: 6px;
+        }
+
+        /* PIN TABS — catalog-card style */
+        .v1-map-tabs {
+          display: flex; gap: 8px; flex-wrap: wrap;
+          margin-bottom: 14px;
+        }
+        .v1-map-tab {
+          all: unset;
+          cursor: pointer;
+          position: relative;
+          padding: 9px 14px 8px 14px;
+          background: var(--kd-paper);
+          border: 1px solid var(--kd-line-mid);
+          border-radius: 6px;
+          min-width: 92px;
+          color: var(--kd-dim-strong);
+          transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease, border-color 0.18s ease;
+        }
+        .v1-map-tab:hover {
+          transform: translateY(-1px);
+          background: var(--kd-card);
+        }
+        .v1-map-tab .num {
+          font-family: 'JetBrains Mono', ui-monospace, monospace;
+          font-size: 8.5px; letter-spacing: 1.2px; font-weight: 700;
+          color: var(--kd-dim-soft);
+          display: block;
+          margin-bottom: 2px;
+        }
+        .v1-map-tab .lab {
+          font-family: 'Bricolage Grotesque', system-ui, sans-serif;
+          font-size: 13px; font-weight: 500;
+          line-height: 1.05;
+          letter-spacing: -0.2px;
+          display: block;
+        }
+        .v1-map-tab.is-active {
+          background: var(--kd-card);
+          border-color: var(--kd-accent);
+          color: var(--kd-ink);
+          box-shadow: 0 4px 14px -10px var(--kd-overlay),
+                      inset 3px 0 0 0 var(--kd-accent);
+        }
+        .v1-map-tab.is-active .num { color: var(--kd-accent); }
+        .v1-map-tab .delta {
+          font-family: 'JetBrains Mono', ui-monospace, monospace;
+          font-size: 8px; letter-spacing: 0.5px;
+          color: var(--kd-dim-soft);
+          margin-left: 4px;
+        }
+        .v1-map-add {
+          all: unset;
+          cursor: pointer;
+          padding: 8px 14px;
+          background: transparent;
+          border: 1px dashed var(--kd-line-dashed);
+          border-radius: 6px;
+          color: var(--kd-dim);
+          font-family: 'JetBrains Mono', ui-monospace, monospace;
+          font-size: 10.5px; font-weight: 700; letter-spacing: 1.4px;
+          align-self: stretch;
+          display: inline-flex; align-items: center;
+          transition: border-color 0.15s ease, color 0.15s ease;
+        }
+        .v1-map-add:hover { border-color: var(--kd-accent); color: var(--kd-accent); }
+
+        /* ACTIVE READOUT — paper card */
+        .v1-map-readout {
+          background: var(--kd-drawer);
+          border: 1px solid var(--kd-line);
+          border-left: 3px solid var(--kd-accent);
+          border-radius: 8px;
+          padding: 12px 14px 10px;
+          margin-bottom: 14px;
+        }
+        .v1-map-title {
+          display: flex; align-items: baseline; gap: 8px;
+          margin-bottom: 4px;
+        }
+        .v1-map-num-tag {
+          font-family: 'JetBrains Mono', ui-monospace, monospace;
+          font-size: 11px; letter-spacing: 0.6px;
+          color: var(--kd-accent);
+          font-weight: 700;
+        }
+        .v1-map-name-display {
+          font-family: 'Bricolage Grotesque', system-ui, sans-serif;
+          font-size: 22px; font-weight: 500;
+          letter-spacing: -0.4px;
+          color: var(--kd-ink);
+          line-height: 1.05;
+          cursor: text;
+          padding: 0 4px;
+          margin: 0 -4px;
+          border-radius: 4px;
+          transition: background 0.15s ease;
+          flex: 1;
+          word-break: break-word;
+        }
+        .v1-map-name-display:hover { background: var(--kd-hover-tint); }
+        .v1-map-name-input {
+          flex: 1;
+          font-family: 'Bricolage Grotesque', system-ui, sans-serif;
+          font-size: 22px; font-weight: 500;
+          letter-spacing: -0.4px;
+          color: var(--kd-ink);
+          background: transparent;
+          border: none; border-bottom: 1.5px solid var(--kd-accent);
+          padding: 0 0 1px 0;
+          outline: none;
+          width: 100%;
+        }
+        .v1-map-query-display {
+          font-family: 'Figtree', sans-serif;
+          font-size: 12.5px;
+          color: var(--kd-dim-strong);
+          line-height: 1.4;
+          cursor: text;
+          padding: 2px 4px;
+          margin: 4px -4px 0;
+          border-radius: 4px;
+          word-break: break-word;
+          transition: background 0.15s ease;
+        }
+        .v1-map-query-display:hover { background: var(--kd-hover-tint); }
+        .v1-map-query-input {
+          width: 100%;
+          margin-top: 4px;
+          padding: 5px 8px;
+          font-family: 'Figtree', sans-serif;
+          font-size: 12.5px;
+          color: var(--kd-ink);
+          background: var(--kd-card);
+          border: 1px solid var(--kd-accent);
+          border-radius: 4px;
+          outline: none;
+        }
+        .v1-map-meta {
+          display: flex; gap: 16px; flex-wrap: wrap;
+          margin-top: 10px; padding-top: 10px;
+          border-top: 1px dashed var(--kd-line);
+          font-family: 'JetBrains Mono', ui-monospace, monospace;
+          font-size: 10px;
+          letter-spacing: 0.5px;
+          align-items: center;
+        }
+        .v1-map-meta .pair { display: inline-flex; align-items: baseline; gap: 5px; }
+        .v1-map-meta .key {
+          color: var(--kd-accent);
+          font-weight: 700;
+          letter-spacing: 1.4px;
+          text-transform: uppercase;
+          font-size: 9px;
+        }
+        .v1-map-meta .val {
+          color: var(--kd-ink);
+          font-weight: 600;
+        }
+        .v1-map-meta .val.dim { color: var(--kd-dim-soft); font-weight: 500; font-style: italic; }
+        .v1-map-meta .actions {
+          margin-left: auto;
+          display: inline-flex; gap: 4px; align-items: center;
+        }
+        .v1-map-meta .open-link {
+          padding: 4px 10px;
+          color: var(--kd-accent);
+          background: transparent;
+          text-decoration: none;
+          border: 1px solid var(--kd-line-mid);
+          border-radius: 999px;
+          font-weight: 700; letter-spacing: 1px;
+          transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+        }
+        .v1-map-meta .open-link:hover {
+          background: var(--kd-accent);
+          color: var(--kd-card);
+          border-color: var(--kd-accent);
+        }
+        .v1-map-del {
+          all: unset; cursor: pointer;
+          padding: 4px 9px;
+          color: var(--kd-dim);
+          border: 1px solid var(--kd-line-mid);
+          border-radius: 999px;
+          font-family: 'JetBrains Mono', ui-monospace, monospace;
+          font-size: 11px; font-weight: 700; line-height: 1;
+          transition: color 0.15s ease, border-color 0.15s ease;
+        }
+        .v1-map-del:hover {
+          color: var(--kd-danger);
+          border-color: var(--kd-danger);
+        }
+
+        /* TOOLBAR */
+        .v1-map-toolbar {
+          display: flex; gap: 6px; flex-wrap: wrap;
+          margin-bottom: 10px; align-items: center;
+        }
+        .v1-map-seg {
+          display: inline-flex;
+          background: var(--kd-card);
+          border: 1px solid var(--kd-line-mid);
+          border-radius: 999px;
+          overflow: hidden;
+        }
+        .v1-map-seg button {
+          all: unset;
+          cursor: pointer;
+          padding: 4px 11px;
+          font-family: 'JetBrains Mono', ui-monospace, monospace;
+          font-size: 9.5px; letter-spacing: 1.4px; font-weight: 700;
+          color: var(--kd-dim);
+          transition: background 0.15s ease, color 0.15s ease;
+        }
+        .v1-map-seg button:hover { color: var(--kd-ink); }
+        .v1-map-seg button.is-on {
+          background: var(--kd-accent);
+          color: var(--kd-card);
+        }
+        .v1-map-route {
+          all: unset; cursor: pointer;
+          padding: 4px 11px;
+          background: var(--kd-card);
+          border: 1px solid var(--kd-line-mid);
+          border-radius: 999px;
+          font-family: 'JetBrains Mono', ui-monospace, monospace;
+          font-size: 9.5px; letter-spacing: 1.4px; font-weight: 700;
+          color: var(--kd-dim);
+          transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+        }
+        .v1-map-route:hover:not(:disabled) { color: var(--kd-ink); }
+        .v1-map-route.is-on {
+          background: var(--kd-accent);
+          color: var(--kd-card);
+          border-color: var(--kd-accent);
+        }
+        .v1-map-route:disabled { opacity: 0.35; cursor: not-allowed; }
+        .v1-map-zoom {
+          margin-left: auto;
+          display: inline-flex;
+          background: var(--kd-card);
+          border: 1px solid var(--kd-line-mid);
+          border-radius: 999px;
+          overflow: hidden;
+        }
+        .v1-map-zoom button {
+          all: unset; cursor: pointer;
+          width: 26px; height: 24px;
+          display: inline-flex; align-items: center; justify-content: center;
+          font-family: 'JetBrains Mono', ui-monospace, monospace;
+          font-size: 14px; font-weight: 700; line-height: 1;
+          color: var(--kd-dim);
+          transition: color 0.15s ease;
+        }
+        .v1-map-zoom button:hover { color: var(--kd-accent); }
+        .v1-map-zoom button:disabled { opacity: 0.3; cursor: not-allowed; }
+        .v1-map-zoom .z-readout {
+          padding: 0 9px;
+          display: inline-flex; align-items: center;
+          font-family: 'JetBrains Mono', ui-monospace, monospace;
+          font-size: 9px; letter-spacing: 1.4px; font-weight: 700;
+          color: var(--kd-dim);
+          border-left: 1px solid var(--kd-line);
+          border-right: 1px solid var(--kd-line);
+        }
+
+        /* MAP FRAME — paper border + corner registration brackets */
+        .v1-map-frame {
+          position: relative;
+          padding: 14px;
+          background: var(--kd-paper);
+          border-radius: 10px;
+          border: 1px solid var(--kd-line-mid);
+          box-shadow:
+            inset 0 0 0 1px var(--kd-card),
+            0 6px 18px -10px var(--kd-overlay);
+        }
+        .v1-map-frame::before,
+        .v1-map-frame::after,
+        .v1-map-frame > .br-bl,
+        .v1-map-frame > .br-br {
+          content: "";
+          position: absolute;
+          width: 14px; height: 14px;
+          border-color: var(--kd-accent);
+          border-style: solid;
+          opacity: 0.85;
+          pointer-events: none;
+        }
+        .v1-map-frame::before {
+          top: 4px; left: 4px;
+          border-width: 1.5px 0 0 1.5px;
+        }
+        .v1-map-frame::after {
+          top: 4px; right: 4px;
+          border-width: 1.5px 1.5px 0 0;
+        }
+        .v1-map-frame > .br-bl {
+          bottom: 4px; left: 4px;
+          border-width: 0 0 1.5px 1.5px;
+        }
+        .v1-map-frame > .br-br {
+          bottom: 4px; right: 4px;
+          border-width: 0 1.5px 1.5px 0;
+        }
+        .v1-map-frame iframe {
+          display: block;
+          width: 100%;
+          border-radius: 4px;
+          background: var(--kd-card);
+        }
+        .v1-map-fig {
+          position: absolute;
+          bottom: -8px; right: 14px;
+          padding: 0 8px;
+          background: var(--kd-card);
+          color: var(--kd-dim);
+          font-family: 'JetBrains Mono', ui-monospace, monospace;
+          font-size: 8.5px; letter-spacing: 1.4px;
+          font-weight: 700;
+          text-transform: uppercase;
+        }
+
+        /* QUICK JUMP STRIP */
+        .v1-map-quick {
+          margin-top: 14px;
+          display: flex; gap: 6px; flex-wrap: wrap;
+          align-items: center;
+        }
+        .v1-map-quick-label {
+          font-family: 'JetBrains Mono', ui-monospace, monospace;
+          font-size: 9px; letter-spacing: 2.4px; font-weight: 700;
+          text-transform: uppercase; color: var(--kd-accent);
+          margin-right: 4px;
+        }
+        .v1-map-quick-chip {
+          all: unset; cursor: pointer;
+          padding: 4px 11px;
+          background: var(--kd-card);
+          border: 1px solid var(--kd-line-mid);
+          border-radius: 999px;
+          font-family: 'Figtree', sans-serif;
+          font-size: 11px; font-weight: 600;
+          color: var(--kd-dim-strong);
+          display: inline-flex; align-items: center; gap: 5px;
+          transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+        }
+        .v1-map-quick-chip:hover {
+          background: var(--kd-accent-soft);
+          color: var(--kd-accent);
+          border-color: var(--kd-accent);
+          transform: translateY(-1px);
+        }
+
+        @media (max-width: 720px) {
+          .v1-map-station { padding: 18px 16px 16px !important; }
+          .v1-map-tab { min-width: 72px; padding: 8px 11px 7px; }
+          .v1-map-name-display, .v1-map-name-input { font-size: 18px !important; }
+          .v1-map-frame iframe { height: 280px !important; }
+          .v1-map-meta .actions { margin-left: 0; }
+        }
+      `}</style>
+
+      <div className="v1-map-eyebrow">
+        <span><span className="compass">⊕</span>STATION LOG · KÖLN</span>
+        <span className="station-id">FIG. {String(activeIdx + 1).padStart(2, '0')} / {String(places.length).padStart(2, '0')}</span>
+      </div>
+
+      <div className="v1-map-tabs">
         {places.map((p, i) => {
-          const isActive = i === activeIdx;
+          const c = kdLookupCoords(p.query);
+          const dist = c ? kdHaversineKm(c, KD_CBS_COORDS) : null;
           return (
             <button
               key={p.id}
+              className={`v1-map-tab${i === activeIdx ? ' is-active' : ''}`}
               onClick={() => setActiveIdx(i)}
-              style={{
-                cursor: 'pointer',
-                background: isActive ? P.accent : 'transparent',
-                color: isActive ? P.card : P.dimStrong,
-                border: `1px solid ${isActive ? P.accent : P.lineMid}`,
-                padding: '4px 12px', borderRadius: 999,
-                fontSize: 11, fontWeight: 600, fontFamily: 'inherit',
-                transition: 'background 0.15s ease, color 0.15s ease',
-              }}
-            >📍 {p.label}</button>
+            >
+              <span className="num">
+                {String(i + 1).padStart(2, '0')}
+                {dist !== null && (
+                  <span className="delta"> · Δ {dist < 0.1 ? '0' : dist.toFixed(1)} km</span>
+                )}
+              </span>
+              <span className="lab">{p.label}</span>
+            </button>
           );
         })}
-        <button
-          onClick={addPlace}
-          title="Add a new pin"
-          style={{
-            cursor: 'pointer',
-            background: 'transparent',
-            color: P.dim,
-            border: `1px dashed ${P.lineDashed}`,
-            padding: '4px 10px', borderRadius: 999,
-            fontSize: 11, fontWeight: 500, fontFamily: 'inherit',
-          }}
-        >+ Pin</button>
+        <button className="v1-map-add" onClick={addBlankPlace}>+ NEW</button>
       </div>
 
-      {/* Active pin: editable label + query */}
       {active && (
-        <div className="va-sans" style={{
-          display: 'grid', gridTemplateColumns: '160px 1fr auto', gap: 8,
-          alignItems: 'center',
-        }}>
-          <input
-            value={active.label}
-            onChange={e => updateActiveLabel(e.target.value)}
-            placeholder="Label"
-            style={{
-              border: `1px solid ${P.lineMid}`, background: P.card,
-              color: P.ink, fontFamily: 'inherit', fontSize: 12,
-              padding: '5px 9px', borderRadius: 6, outline: 'none',
-              fontWeight: 600,
-            }}
-          />
-          <input
-            value={active.query}
-            onChange={e => updateActiveQuery(e.target.value)}
-            placeholder="Address or place name"
-            style={{
-              border: `1px solid ${P.lineMid}`, background: P.card,
-              color: P.ink, fontFamily: 'inherit', fontSize: 12,
-              padding: '5px 9px', borderRadius: 6, outline: 'none',
-              minWidth: 0,
-            }}
-          />
-          <div style={{ display: 'flex', gap: 4 }}>
-            <a
-              href={openLink} target="_blank" rel="noopener noreferrer"
-              title="Open in Google Maps"
-              style={{
-                color: P.accent, textDecoration: 'none',
-                border: `1px solid ${P.lineMid}`, borderRadius: 6,
-                padding: '5px 10px', fontSize: 11, fontWeight: 600,
-                display: 'inline-flex', alignItems: 'center',
-              }}
-            >↗</a>
-            {places.length > 1 && (
-              <button
-                onClick={removeActive}
-                title="Delete this pin"
-                style={{
-                  cursor: 'pointer',
-                  background: 'transparent', color: P.dim,
-                  border: `1px solid ${P.lineMid}`, borderRadius: 6,
-                  padding: '5px 10px', fontSize: 12, fontWeight: 700,
-                  fontFamily: "'JetBrains Mono', ui-monospace, monospace",
-                }}
-              >×</button>
-            )}
-          </div>
-        </div>
+        <KolnMapReadout
+          place={active}
+          idx={activeIdx}
+          coords={coords}
+          distKm={distKm}
+          openInMaps={openInMaps}
+          onLabelChange={(v) => updatePlaceField('label', v)}
+          onQueryChange={(v) => updatePlaceField('query', v)}
+          onRemove={places.length > 1 ? removeActive : null}
+        />
       )}
 
-      {/* The map itself */}
-      <div style={{
-        position: 'relative',
-        borderRadius: 12, overflow: 'hidden',
-        border: `1px solid ${P.lineMid}`,
-        background: P.lineSoft,
-      }}>
+      <div className="v1-map-toolbar">
+        <div className="v1-map-seg">
+          {KD_MAP_TYPES.map((t) => (
+            <button
+              key={t.key}
+              className={mapType === t.key && !showRoute ? 'is-on' : ''}
+              onClick={() => updateMap({ mapType: t.key, showRoute: false })}
+              title={`Switch to ${t.label.toLowerCase()} view`}
+            >{t.label}</button>
+          ))}
+        </div>
+        <button
+          className={`v1-map-route${showRoute ? ' is-on' : ''}`}
+          onClick={() => updateMap({ showRoute: !showRoute })}
+          disabled={isAtCBS}
+          title={isAtCBS ? "You're at CBS already" : 'Walking directions to CBS'}
+        >→ CBS</button>
+        <div className="v1-map-zoom">
+          <button
+            onClick={() => updateMap({ zoom: Math.max(8, zoom - 1) })}
+            disabled={zoom <= 8}
+            title="Zoom out"
+          >−</button>
+          <span className="z-readout">Z{zoom}</span>
+          <button
+            onClick={() => updateMap({ zoom: Math.min(20, zoom + 1) })}
+            disabled={zoom >= 20}
+            title="Zoom in"
+          >+</button>
+        </div>
+      </div>
+
+      <div className="v1-map-frame">
+        <span className="br-bl"/>
+        <span className="br-br"/>
         <iframe
           key={src}
           title={`Köln map — ${active ? active.label : 'Köln'}`}
           src={src}
-          width="100%" height="360"
+          height="380"
           loading="lazy"
           referrerPolicy="no-referrer-when-downgrade"
-          style={{ border: 0, display: 'block' }}
+          style={{ border: 0 }}
         />
+        <span className="v1-map-fig">FIG. {String(activeIdx + 1).padStart(2, '0')}{showRoute ? ' · ROUTE' : ` · ${KD_MAP_TYPES.find(t => t.key === mapType)?.label || ''}`}</span>
+      </div>
+
+      <div className="v1-map-quick">
+        <span className="v1-map-quick-label">Quick →</span>
+        {KD_QUICK_JUMPS.map((q) => (
+          <button
+            key={q.label}
+            className="v1-map-quick-chip"
+            onClick={() => jumpTo(q)}
+            title={q.query}
+          >
+            <span aria-hidden="true">{q.emoji}</span>
+            {q.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function KolnMapReadout({ place, idx, coords, distKm, openInMaps, onLabelChange, onQueryChange, onRemove }) {
+  const [editingName,  setEditingName]  = React.useState(false);
+  const [editingQuery, setEditingQuery] = React.useState(false);
+  const [nameDraft,  setNameDraft]  = React.useState(place.label);
+  const [queryDraft, setQueryDraft] = React.useState(place.query);
+
+  React.useEffect(() => { setNameDraft(place.label);  }, [place.label]);
+  React.useEffect(() => { setQueryDraft(place.query); }, [place.query]);
+
+  const commitName  = () => { onLabelChange((nameDraft || '').trim() || place.label);  setEditingName(false); };
+  const commitQuery = () => { onQueryChange((queryDraft || '').trim() || place.query); setEditingQuery(false); };
+
+  return (
+    <div className="v1-map-readout">
+      <div className="v1-map-title">
+        <span className="v1-map-num-tag">[ {String(idx + 1).padStart(2, '0')} ]</span>
+        {editingName ? (
+          <input
+            autoFocus
+            className="v1-map-name-input"
+            value={nameDraft}
+            onChange={(e) => setNameDraft(e.target.value)}
+            onBlur={commitName}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') commitName();
+              if (e.key === 'Escape') { setNameDraft(place.label); setEditingName(false); }
+            }}
+          />
+        ) : (
+          <span
+            className="v1-map-name-display"
+            onClick={() => setEditingName(true)}
+            title="Click to edit label"
+          >{place.label}</span>
+        )}
+      </div>
+      {editingQuery ? (
+        <input
+          autoFocus
+          className="v1-map-query-input"
+          value={queryDraft}
+          onChange={(e) => setQueryDraft(e.target.value)}
+          onBlur={commitQuery}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') commitQuery();
+            if (e.key === 'Escape') { setQueryDraft(place.query); setEditingQuery(false); }
+          }}
+        />
+      ) : (
+        <div
+          className="v1-map-query-display"
+          onClick={() => setEditingQuery(true)}
+          title="Click to edit address"
+        >{place.query}</div>
+      )}
+      <div className="v1-map-meta">
+        <span className="pair">
+          <span className="key">Coord</span>
+          {coords ? (
+            <span className="val">{kdFormatDMS(coords[0], true)} · {kdFormatDMS(coords[1], false)}</span>
+          ) : (
+            <span className="val dim">— unmapped —</span>
+          )}
+        </span>
+        {distKm !== null && (
+          <span className="pair">
+            <span className="key">Δ CBS</span>
+            <span className="val">{distKm < 0.1 ? '0' : distKm.toFixed(1)} km</span>
+          </span>
+        )}
+        <span className="actions">
+          <a
+            className="open-link"
+            href={openInMaps}
+            target="_blank"
+            rel="noopener noreferrer"
+            title="Open in Google Maps"
+          >↗ MAPS</a>
+          {onRemove && (
+            <button
+              className="v1-map-del"
+              onClick={onRemove}
+              title="Delete this pin"
+              aria-label="Delete pin"
+            >×</button>
+          )}
+        </span>
       </div>
     </div>
   );
