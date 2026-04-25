@@ -611,6 +611,255 @@ function parseWhen(when, baseYear) {
   return null;
 }
 
+// Live departure clock for the hero row. Ticks every minute so the
+// hours readout stays current. Shows the next upcoming milestone
+// pulled from state.upcoming as an actionable teaser.
+function DepartureClock({ state }) {
+  const [now, setNow] = React.useState(() => new Date());
+  React.useEffect(() => {
+    const t = setInterval(() => setNow(new Date()), 60_000);
+    return () => clearInterval(t);
+  }, []);
+
+  const dep = new Date(state.meta.departure + 'T00:00:00');
+  const ms = dep - now;
+  const arrived = ms <= 0;
+  const totalMin = Math.max(0, Math.floor(Math.abs(ms) / 60_000));
+  const totalH = Math.floor(totalMin / 60);
+  const totalD = Math.floor(totalH / 24);
+  const weeks = Math.floor(totalD / 7);
+  const remH = totalH - totalD * 24;
+
+  // Find the next upcoming milestone after today (parsed from free-form when).
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const nextMilestone = (state.upcoming || [])
+    .map(u => ({ ...u, _date: parseWhen(u.when, dep.getFullYear()) }))
+    .filter(u => u._date && u._date >= today)
+    .sort((a, b) => a._date - b._date)[0];
+
+  const daysToNext = nextMilestone
+    ? Math.max(0, Math.round((nextMilestone._date - today) / (1000 * 60 * 60 * 24)))
+    : null;
+
+  const depWeekday = dep.toLocaleDateString('en-US', { weekday: 'short' });
+  const depDate    = dep.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
+  // Destination from meta if set, else fallback. Hardcoding 'Köln' for now.
+  const destination = (state.meta && state.meta.destination) || 'Köln';
+
+  return (
+    <div className="v1-clock">
+      <style>{`
+        .v1-clock {
+          position: relative;
+          background: var(--kd-ink);
+          color: var(--kd-paper);
+          border-radius: 18px;
+          padding: 18px 22px 16px;
+          overflow: hidden;
+          display: flex; flex-direction: column; gap: 10px;
+          min-height: 100%;
+        }
+        .v1-clock::before {
+          content: "";
+          position: absolute; inset: 0;
+          pointer-events: none;
+          background-image: radial-gradient(rgba(232,220,196,0.08) 1px, transparent 1px);
+          background-size: 16px 16px;
+          opacity: 0.6;
+        }
+        .v1-clock::after {
+          content: "";
+          position: absolute;
+          top: -40%; right: -10%;
+          width: 60%; height: 80%;
+          background: radial-gradient(circle, rgba(224,113,64,0.22) 0%, transparent 60%);
+          pointer-events: none;
+        }
+        .v1-clock > * { position: relative; z-index: 1; }
+
+        .v1-clock-eyebrow {
+          display: flex; align-items: baseline; justify-content: space-between;
+          font-family: 'JetBrains Mono', ui-monospace, monospace;
+          font-size: 9.5px; letter-spacing: 2.4px; font-weight: 700;
+          text-transform: uppercase;
+          color: var(--kd-accent);
+        }
+        .v1-clock-eyebrow .arrow {
+          display: inline-block;
+          margin: 0 6px;
+          color: var(--kd-paper);
+          opacity: 0.5;
+          animation: kd-arrow-pulse 2.6s ease-in-out infinite;
+        }
+        .v1-clock-eyebrow .dest {
+          color: var(--kd-paper);
+          letter-spacing: 1.2px;
+        }
+        .v1-clock-eyebrow .stamp {
+          color: var(--kd-paper);
+          opacity: 0.45;
+          font-size: 8.5px;
+          letter-spacing: 1.4px;
+        }
+        @keyframes kd-arrow-pulse {
+          0%, 100% { transform: translateX(0); opacity: 0.45; }
+          50%      { transform: translateX(3px); opacity: 0.85; }
+        }
+
+        .v1-clock-num-row {
+          display: flex; align-items: baseline; gap: 14px;
+          margin-top: 2px;
+        }
+        .v1-clock-num {
+          font-family: 'Bricolage Grotesque', system-ui, sans-serif;
+          font-size: 80px; line-height: 0.95;
+          font-weight: 500; letter-spacing: -3px;
+          color: var(--kd-paper);
+          font-variant-numeric: tabular-nums;
+        }
+        .v1-clock-unit {
+          font-family: 'JetBrains Mono', ui-monospace, monospace;
+          font-size: 11px; letter-spacing: 2px; font-weight: 700;
+          text-transform: uppercase;
+          color: var(--kd-paper);
+          opacity: 0.6;
+        }
+        .v1-clock-arrived {
+          color: var(--kd-accent);
+          font-family: 'JetBrains Mono', ui-monospace, monospace;
+          font-size: 14px; letter-spacing: 3px;
+          font-weight: 700;
+          text-transform: uppercase;
+        }
+
+        .v1-clock-breakdown {
+          display: flex; gap: 14px; flex-wrap: wrap;
+          margin-top: -4px;
+          font-family: 'JetBrains Mono', ui-monospace, monospace;
+          font-size: 10px; letter-spacing: 1.2px; font-weight: 600;
+          color: var(--kd-paper);
+          opacity: 0.6;
+        }
+        .v1-clock-breakdown .sep {
+          opacity: 0.4;
+        }
+
+        .v1-clock-eta {
+          margin-top: auto;
+          padding-top: 10px;
+          border-top: 1px dashed rgba(232,220,196,0.18);
+          display: flex; align-items: baseline; justify-content: space-between;
+          gap: 12px; flex-wrap: wrap;
+          font-family: 'JetBrains Mono', ui-monospace, monospace;
+          font-size: 10px; letter-spacing: 1.4px; font-weight: 600;
+          text-transform: uppercase;
+          color: var(--kd-paper);
+        }
+        .v1-clock-eta .label {
+          color: var(--kd-accent);
+          font-weight: 700;
+          letter-spacing: 2px;
+          margin-right: 6px;
+        }
+        .v1-clock-eta .val {
+          opacity: 0.85;
+        }
+        .v1-clock-eta .weekday {
+          color: var(--kd-paper);
+          opacity: 0.65;
+          margin-right: 4px;
+        }
+
+        .v1-clock-next {
+          padding-top: 8px;
+          margin-top: 4px;
+          border-top: 1px dashed rgba(232,220,196,0.12);
+          display: flex; align-items: baseline; gap: 8px;
+          font-family: 'Figtree', sans-serif;
+          font-size: 12px;
+          color: var(--kd-paper);
+          opacity: 0.85;
+        }
+        .v1-clock-next .key {
+          font-family: 'JetBrains Mono', ui-monospace, monospace;
+          font-size: 9px; letter-spacing: 2px; font-weight: 700;
+          color: var(--kd-accent);
+          text-transform: uppercase;
+          flex-shrink: 0;
+        }
+        .v1-clock-next .what {
+          flex: 1;
+          overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+          font-weight: 500;
+        }
+        .v1-clock-next .when {
+          font-family: 'JetBrains Mono', ui-monospace, monospace;
+          font-size: 10px; letter-spacing: 1px; font-weight: 700;
+          color: var(--kd-paper);
+          opacity: 0.6;
+          flex-shrink: 0;
+        }
+
+        @media (max-width: 720px) {
+          .v1-clock-num { font-size: 64px !important; letter-spacing: -2px !important; }
+          .v1-clock { padding: 16px 18px 14px; }
+        }
+      `}</style>
+
+      <div className="v1-clock-eyebrow">
+        <span>
+          {arrived ? 'Arrived' : 'Departure'}
+          <span className="arrow">→</span>
+          <span className="dest">{destination}</span>
+        </span>
+        <span className="stamp">EST · LIVE</span>
+      </div>
+
+      <div className="v1-clock-num-row">
+        {arrived ? (
+          <span className="v1-clock-arrived">✈ Vor Ort</span>
+        ) : (
+          <>
+            <span className="v1-clock-num">{totalD}</span>
+            <span className="v1-clock-unit">Days</span>
+          </>
+        )}
+      </div>
+
+      {!arrived && (
+        <div className="v1-clock-breakdown">
+          <span>{weeks} W</span>
+          <span className="sep">·</span>
+          <span>{totalH.toLocaleString()} H</span>
+          <span className="sep">·</span>
+          <span>{remH} H REM</span>
+        </div>
+      )}
+
+      <div className="v1-clock-eta">
+        <span>
+          <span className="label">{arrived ? 'Was' : 'ETA'}</span>
+          <span className="weekday">{depWeekday.toUpperCase()}</span>
+          <span className="val">{depDate.toUpperCase()}</span>
+        </span>
+        <span className="val">≈ {weeks} wks</span>
+      </div>
+
+      {nextMilestone && (
+        <div className="v1-clock-next" title={`${nextMilestone.what} · ${nextMilestone.when}`}>
+          <span className="key">Next</span>
+          <span className="what">{nextMilestone.what}</span>
+          <span className="when">
+            {nextMilestone.when.toUpperCase()}
+            {daysToNext !== null && (daysToNext === 0 ? ' · TODAY' : ` · ${daysToNext}d`)}
+          </span>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // Mini month grid used by MilestoneCalendar. Shows days as a 7-col
 // grid; days with a milestone are filled with the category color.
 function MiniMonth({ year, month, milestones, today, departureKey, onPick }) {

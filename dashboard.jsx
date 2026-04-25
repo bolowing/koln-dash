@@ -171,33 +171,7 @@ function VariationA({ onReset }) {
         display: 'grid', gridTemplateColumns: '1.1fr 1.2fr',
         gap: 18, marginBottom: 28,
       }}>
-        <div className="v1-days-card" style={{
-          background: P.ink, color: P.paper,
-          borderRadius: 18, padding: '22px 26px',
-          position: 'relative', overflow: 'hidden',
-        }}>
-          <div className="va-mono" style={{
-            fontSize: 10, letterSpacing: 2, textTransform: 'uppercase', opacity: 0.6,
-          }}>Days until departure</div>
-          <div className="v1-days-num" style={{
-            fontSize: 76, fontWeight: 500, lineHeight: 1, letterSpacing: -2,
-            marginTop: 4, display: 'flex', alignItems: 'baseline', gap: 12,
-          }}>
-            {days}
-            <span className="va-sans" style={{
-              fontSize: 12, opacity: 0.65, fontWeight: 400,
-              letterSpacing: 0,
-            }}>days</span>
-          </div>
-          <div className="va-sans" style={{
-            fontSize: 12, marginTop: 4, opacity: 0.7,
-            display: 'flex', justifyContent: 'space-between', gap: 12,
-          }}>
-            <span>Target · {targetDate}</span>
-            <span style={{ opacity: 0.8 }}>≈ {Math.round(days/7)} weeks</span>
-          </div>
-        </div>
-
+        <DepartureClock state={state}/>
         <FxCalculator state={state} setState={setState}/>
       </section>
 
