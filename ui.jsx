@@ -682,29 +682,26 @@ function DepartureClock({ state }) {
            with a gentle bob and an accent-colored body so it actually reads. */
         .v1-clock-plane {
           position: absolute;
-          top: 56px; right: 22px;
+          top: 48px; right: 28px;
           z-index: 1;
-          font-family: 'JetBrains Mono', ui-monospace, monospace;
-          font-size: 22px;
-          line-height: 1;
+          width: 64px; height: 64px;
           color: var(--kd-accent);
-          opacity: 0.95;
-          white-space: pre;
-          letter-spacing: -1px;
+          filter: drop-shadow(0 0 10px rgba(224,113,64,0.55));
           pointer-events: none;
-          text-shadow: 0 0 14px rgba(224,113,64,0.55);
           animation: kd-plane-bob 3.6s ease-in-out infinite;
+          transform-origin: 50% 50%;
         }
+        .v1-clock-plane svg { width: 100%; height: 100%; display: block; }
         @keyframes kd-plane-bob {
-          0%, 100% { transform: translateY(0)   rotate(-2deg); }
-          50%      { transform: translateY(-4px) rotate(2deg); }
+          0%, 100% { transform: translate(0, 0)    rotate(42deg); }
+          50%      { transform: translate(2px, -4px) rotate(46deg); }
         }
         /* Contrail — animated dashes that flow leftward FROM the plane,
            giving the impression it's flying right. */
         .v1-clock-contrail {
           position: absolute;
-          top: 70px; right: 130px;
-          width: 240px; height: 2px;
+          top: 78px; right: 96px;
+          width: 220px; height: 2px;
           z-index: 0;
           background-image: repeating-linear-gradient(
             to right,
@@ -906,9 +903,12 @@ function DepartureClock({ state }) {
       {/* Decorative ASCII layer */}
       <div className="v1-clock-pulse" aria-hidden="true"/>
       <div className="v1-clock-contrail" aria-hidden="true"/>
-      <div className="v1-clock-plane" aria-hidden="true">{`    __|__
-─o─(_)─o─
-    ‾‾‾`}</div>
+      <div className="v1-clock-plane" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="currentColor">
+          {/* Top-down jet silhouette: nose up, wings mid, tail bottom */}
+          <path d="M12 1.5c-.5 0-.9.45-.9 1v6.05L2.4 12.7c-.3.15-.5.45-.5.8v1.4c0 .35.3.6.65.55L11.1 14l.25 4.05-2.1 1.45c-.2.15-.32.4-.32.65v.6c0 .35.3.6.65.55L12 20.5l2.42.8c.35.05.65-.2.65-.55v-.6c0-.25-.12-.5-.32-.65l-2.1-1.45L12.9 14l8.55 1.45c.35.05.65-.2.65-.55v-1.4c0-.35-.2-.65-.5-.8L12.9 8.55V2.5c0-.55-.4-1-.9-1z"/>
+        </svg>
+      </div>
       <div className="v1-clock-runway" aria-hidden="true"/>
       <div className="v1-clock-flightno" aria-hidden="true">▶ FLT KÖLN-26</div>
 
