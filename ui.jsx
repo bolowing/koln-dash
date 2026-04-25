@@ -299,9 +299,10 @@ function pickDudeContent(state, progress, byCat, cycle) {
   const allTasks = [...state.lanes.VJ, ...state.lanes.Jul];
   const asap = allTasks.filter(t => t.urgency === 'asap' && !state.checked[t.id]);
 
-  // Milestones still trump phrases — but only on cycle 0 (initial render)
-  // so clicking always advances to a new phrase.
-  if (cycle === 0) {
+  // Phrases are the default. Milestones only trigger if the user
+  // explicitly cycles into the milestone slot (every 7th cycle), so
+  // they don't get in the way of learning.
+  if (cycle > 0 && cycle % 7 === 0) {
     if (progress.total > 0 && progress.pct >= 100) {
       return { kind: 'milestone', text: "Alles fertig! Kölsch is on me. 🍺" };
     }
