@@ -589,7 +589,207 @@ function OverallProgress({ state }) {
   );
 }
 
-// "What's ahead" timeline with inline add/delete editor.
+// Heuristic parser: turn a free-form `when` string ("May 1", "Aug",
+// "May/Jun", "Sep 1") into a Date. Year is inferred relative to today
+// (anything in the past month-of-year rolls forward). Returns null
+// if we can't extract a month.
+const KD_MONTHS = {
+  jan: 0, january: 0, feb: 1, february: 1, mar: 2, march: 2,
+  apr: 3, april: 3, may: 4, jun: 5, june: 5, jul: 6, july: 6,
+  aug: 7, august: 7, sep: 8, sept: 8, september: 8,
+  oct: 9, october: 9, nov: 10, november: 10, dec: 11, december: 11,
+};
+function parseWhen(when, baseYear) {
+  if (!when) return null;
+  const s = String(when).toLowerCase();
+  // Try "Mon D" or "Mon DD" first.
+  const md = s.match(/\b(jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\s+(\d{1,2})\b/);
+  if (md) return new Date(baseYear, KD_MONTHS[md[1]], parseInt(md[2], 10));
+  // "Mon" alone — pick mid-month (15th) as a sensible anchor.
+  const m = s.match(/\b(jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\b/);
+  if (m) return new Date(baseYear, KD_MONTHS[m[1]], 15);
+  return null;
+}
+
+// Mini month grid used by MilestoneCalendar. Shows days as a 7-col
+// grid; days with a milestone are filled with the category color.
+function MiniMonth({ year, month, milestones, today, departureKey, onPick }) {
+  const first = new Date(year, month, 1);
+  const startWeekday = first.getDay(); // 0=Sun
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const cells = [];
+  for (let i = 0; i < startWeekday; i++) cells.push(null);
+  for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+  // Pad to a multiple of 7 so the grid is stable.
+  while (cells.length % 7 !== 0) cells.push(null);
+
+  const monthLabel = first.toLocaleDateString('en-US', { month: 'short' });
+  const yearLabel = first.getFullYear();
+  const weekdayLetters = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+
+  const todayKey = today ? `${today.getFullYear()}-${today.getMonth()}-${today.getDate()}` : null;
+
+  return (
+    <div style={{
+      flex: '1 1 130px', minWidth: 130, maxWidth: 220,
+      background: P.card,
+      border: `1px solid ${P.lineSoft}`,
+      borderRadius: 10, padding: '10px 10px 8px',
+    }}>
+      <div className="va-mono" style={{
+        display: 'flex', justifyContent: 'space-between', alignItems: 'baseline',
+        marginBottom: 6, fontSize: 10, letterSpacing: 1.2, fontWeight: 700,
+        textTransform: 'uppercase',
+      }}>
+        <span style={{ color: P.accent }}>{monthLabel}</span>
+        <span style={{ color: P.dimSoft, fontSize: 9 }}>{yearLabel}</span>
+      </div>
+      <div style={{
+        display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 1,
+        fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+      }}>
+        {weekdayLetters.map((w, i) => (
+          <div key={`w${i}`} style={{
+            fontSize: 8, color: P.dimSoft, textAlign: 'center',
+            padding: '1px 0 3px', fontWeight: 700,
+          }}>{w}</div>
+        ))}
+        {cells.map((d, i) => {
+          if (d === null) return <div key={`e${i}`}/>;
+          const key = `${year}-${month}-${d}`;
+          const ms = milestones.filter(m => m._key === key);
+          const isToday = key === todayKey;
+          const isDeparture = key === departureKey;
+          const primary = ms[0];
+          const fill = primary ? primary._color : 'transparent';
+          const fg   = primary ? primary._bg    : P.dim;
+          return (
+            <button
+              key={key}
+              onClick={() => primary && onPick(primary.id)}
+              title={ms.length
+                ? ms.map(m => `${m.what} (${m.cat})`).join('\n')
+                : new Date(year, month, d).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+              style={{
+                cursor: ms.length ? 'pointer' : 'default',
+                position: 'relative',
+                width: '100%', aspectRatio: '1 / 1',
+                border: 'none', padding: 0,
+                background: fill,
+                color: primary ? '#fff' : (isToday ? P.accent : P.dim),
+                fontSize: 9, lineHeight: 1, fontWeight: isToday ? 700 : 500,
+                borderRadius: 3,
+                boxShadow: isToday ? `inset 0 0 0 1.5px ${P.accent}` : 'none',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                transition: 'transform 0.12s ease',
+                fontFamily: 'inherit',
+              }}
+              onMouseEnter={e => primary && (e.currentTarget.style.transform = 'scale(1.15)')}
+              onMouseLeave={e => primary && (e.currentTarget.style.transform = 'scale(1)')}
+            >
+              {isDeparture ? '✈' : d}
+              {ms.length > 1 && (
+                <span style={{
+                  position: 'absolute', top: 1, right: 1,
+                  width: 4, height: 4, borderRadius: 50,
+                  background: '#fff', opacity: 0.85,
+                }}/>
+              )}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function MilestoneCalendar({ items, categories, departure, onPick }) {
+  const today = new Date();
+  // Departure date drives the right edge of the calendar.
+  const dep = departure ? new Date(departure + 'T00:00:00') : null;
+  const startY = today.getFullYear(), startM = today.getMonth();
+  const endY = dep ? dep.getFullYear() : startY, endM = dep ? dep.getMonth() : startM + 4;
+  // Build the month list, capped at 6 to keep the strip readable.
+  const months = [];
+  let y = startY, m = startM;
+  while ((y < endY || (y === endY && m <= endM)) && months.length < 6) {
+    months.push({ year: y, month: m });
+    m++; if (m > 11) { m = 0; y++; }
+  }
+  const baseYear = startY;
+
+  // Decorate items with parsed date + category color/bg for the grid.
+  const decorated = items.map(it => {
+    const d = parseWhen(it.when, baseYear);
+    const cd = categories[it.cat] || { color: P.dim, bg: P.lineSoft };
+    return { ...it, _date: d, _color: cd.color, _bg: cd.bg,
+      _key: d ? `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}` : null };
+  });
+  const placed = decorated.filter(it => it._date);
+  const unplaced = decorated.filter(it => !it._date);
+
+  const departureKey = dep ? `${dep.getFullYear()}-${dep.getMonth()}-${dep.getDate()}` : null;
+
+  return (
+    <div style={{ marginBottom: 18 }}>
+      <div style={{
+        display: 'flex', justifyContent: 'space-between', alignItems: 'baseline',
+        gap: 8, marginBottom: 10, flexWrap: 'wrap',
+      }}>
+        <div className="va-mono" style={{
+          fontSize: 10, letterSpacing: 2, textTransform: 'uppercase',
+          color: P.accent, fontWeight: 700,
+        }}>Calendar · here → Köln</div>
+        <div className="va-sans" style={{ fontSize: 11, color: P.dim }}>
+          {placed.length} milestone{placed.length === 1 ? '' : 's'} plotted
+          {unplaced.length > 0 && ` · ${unplaced.length} undated`}
+        </div>
+      </div>
+      <div style={{
+        display: 'flex', gap: 8, flexWrap: 'wrap',
+      }}>
+        {months.map(({ year, month }) => (
+          <MiniMonth
+            key={`${year}-${month}`}
+            year={year} month={month}
+            milestones={placed}
+            today={today}
+            departureKey={departureKey}
+            onPick={onPick}
+          />
+        ))}
+      </div>
+      {/* Compact legend */}
+      <div className="va-sans" style={{
+        marginTop: 8, display: 'flex', gap: 10, flexWrap: 'wrap',
+        fontSize: 10, color: P.dim, alignItems: 'center',
+      }}>
+        {Object.entries(categories).map(([name, cd]) => {
+          const used = placed.some(p => p.cat === name);
+          if (!used) return null;
+          return (
+            <span key={name} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+              <span style={{
+                display: 'inline-block', width: 8, height: 8,
+                borderRadius: 2, background: cd.color,
+              }}/>
+              {name}
+            </span>
+          );
+        })}
+        <span style={{
+          marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 4,
+        }}>
+          <span style={{ color: P.accent, fontWeight: 700 }}>✈</span>
+          Departure
+        </span>
+      </div>
+    </div>
+  );
+}
+
+// "What's ahead" timeline with inline add/delete editor + a calendar
+// visualization at the top to make the section less wordy.
 function MilestoneTimeline({ state, setState, categories }) {
   const items = Array.isArray(state.upcoming) ? state.upcoming : [];
   const [adding, setAdding] = React.useState(false);
@@ -617,6 +817,15 @@ function MilestoneTimeline({ state, setState, categories }) {
     }));
   };
 
+  // Brief flash to draw the eye when a calendar dot is clicked.
+  const [flashId, setFlashId] = React.useState(null);
+  const pickById = (id) => {
+    setFlashId(id);
+    const el = document.getElementById(`milestone-${id}`);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    setTimeout(() => setFlashId(null), 1500);
+  };
+
   return (
     <div style={{
       background: P.card, borderRadius: 18, padding: '22px 24px',
@@ -625,6 +834,7 @@ function MilestoneTimeline({ state, setState, categories }) {
       <style>{`
         .v1-timeline-row { transition: background 0.12s ease; }
         .v1-timeline-row:hover { background: var(--kd-hover); }
+        .v1-timeline-row.is-flash { background: var(--kd-accent-soft); }
         .v1-timeline-row .v1-timeline-del {
           opacity: 0;
           transition: opacity 0.15s ease;
@@ -642,6 +852,14 @@ function MilestoneTimeline({ state, setState, categories }) {
         }
         .v1-timeline-del:hover { background: var(--kd-hover); color: var(--kd-danger); }
       `}</style>
+
+      <MilestoneCalendar
+        items={items}
+        categories={categories}
+        departure={state.meta && state.meta.departure}
+        onPick={pickById}
+      />
+
       <div style={{ position: 'relative', paddingLeft: 4 }}>
         <div style={{
           position: 'absolute', left: 14, top: 10, bottom: 10, width: 2,
@@ -650,13 +868,19 @@ function MilestoneTimeline({ state, setState, categories }) {
         {items.map((u, i) => {
           const isLast = i === items.length - 1;
           const key = u.id || `${u.when}::${u.what}::${i}`;
+          const flashed = u.id && u.id === flashId;
           return (
-            <div key={key} className="va-sans v1-timeline-row" style={{
-              position: 'relative', paddingLeft: 36,
-              padding: '6px 8px 6px 36px', borderRadius: 6, marginBottom: 4,
-              display: 'grid', gridTemplateColumns: '70px 1fr auto 22px', gap: 12,
-              alignItems: 'center',
-            }}>
+            <div
+              key={key}
+              id={u.id ? `milestone-${u.id}` : undefined}
+              className={`va-sans v1-timeline-row${flashed ? ' is-flash' : ''}`}
+              style={{
+                position: 'relative', paddingLeft: 36,
+                padding: '6px 8px 6px 36px', borderRadius: 6, marginBottom: 4,
+                display: 'grid', gridTemplateColumns: '70px 1fr auto 22px', gap: 12,
+                alignItems: 'center',
+                scrollMarginTop: 100,
+              }}>
               <div style={{
                 position: 'absolute', left: 8, top: '50%', marginTop: -7,
                 width: 14, height: 14, borderRadius: '50%',
