@@ -94,6 +94,18 @@
     // Up to 3 task ids currently "in progress". Auto-unpinned when checked off.
     pinned: [],
 
+    // Köln map — editable place query that drives the embedded Google
+    // Maps iframe. Stored as a list so we can swap between school,
+    // apartment, neighborhoods etc. without losing the others.
+    map: {
+      activeIdx: 0,
+      places: [
+        { id: 'p-cbs',  label: 'CBS School',     query: 'Cologne Business School, Köln, Germany' },
+        { id: 'p-dom',  label: 'Köln Dom',        query: 'Kölner Dom, Köln, Germany' },
+        { id: 'p-belg', label: 'Belgisches Viertel', query: 'Belgisches Viertel, Köln, Germany' },
+      ],
+    },
+
     // Fintiba blocked account — the €12,063 deposit that releases €992/mo
     // for living expenses once VJ activates the account in Germany.
     blocked: {
@@ -227,6 +239,11 @@
               seededPersonalMilestones: true },
             upcoming: mergedUpcoming,
             pinned: Array.isArray(parsed.pinned) ? parsed.pinned.slice(0, 3) : [],
+            map: { ...DEFAULTS.map, ...(parsed.map || {}),
+              places: Array.isArray(parsed.map && parsed.map.places) && parsed.map.places.length
+                ? parsed.map.places
+                : DEFAULTS.map.places,
+            },
             categories: mergedCats,
             checked: parsed.checked || {},
             notes: parsed.notes || {},
