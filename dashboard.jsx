@@ -23,12 +23,16 @@ function VariationA({ onReset }) {
 
   const toggleCheck = (id) => setState(s => {
     const willBeChecked = !s.checked[id];
-    const next = { ...s, checked: { ...s.checked, [id]: willBeChecked } };
+    let next = { ...s, checked: { ...s.checked, [id]: willBeChecked } };
     if (!willBeChecked) return next;
+    // Auto-unpin when a task is completed.
+    next = KD.unpin(next, id);
     const task = [...s.lanes.VJ, ...s.lanes.Jul].find(t => t.id === id);
     if (!task) return next;
     return KD.logActivity(next, s.meta.currentUser || 'VJ', 'completed', task.text);
   });
+
+  const togglePin = (id) => setState(s => KD.togglePin(s, id));
 
   const setCurrentUser = (u) =>
     setState(s => ({ ...s, meta: { ...s.meta, currentUser: u } }));
@@ -157,7 +161,12 @@ function VariationA({ onReset }) {
         </div>
       </header>
 
-      <ActivityFeed activity={state.activity || []}/>
+      <ActivityFeed
+        activity={state.activity || []}
+        state={state} setState={setState}
+        onOpenTask={(t, lane) => setOpenTask({ task: t, lane })}
+        onToggleCheck={toggleCheck}
+      />
 
       {/* Hero row */}
       <section className="v1-hero-row" style={{
@@ -416,6 +425,7 @@ function VariationA({ onReset }) {
             onOpen={(t) => setOpenTask({ task: t, lane: 'VJ' })}
             onAdd={() => addTask('VJ')}
             onToggle={toggleCheck}
+            onTogglePin={togglePin}
             categories={cats}
           />
           <Lane
@@ -551,8 +561,15 @@ function WhoAmI({ currentUser, setCurrentUser }) {
   );
 }
 
-function ActivityFeed({ activity }) {
-  if (!activity || !activity.length) return null;
+function ActivityFeed({ activity, state, setState, onOpenTask, onToggleCheck }) {
+  const pinnedIds = (state && Array.isArray(state.pinned)) ? state.pinned : [];
+  const pinnedCards = pinnedIds
+    .map(id => KD.findTask(state, id))
+    .filter(Boolean);
+  const hasPinned = pinnedCards.length > 0;
+  const hasActivity = activity && activity.length > 0;
+  if (!hasPinned && !hasActivity) return null;
+
   const fmtAgo = (iso) => {
     const diff = Date.now() - new Date(iso).getTime();
     const m = Math.floor(diff / 60000);
@@ -562,17 +579,85 @@ function ActivityFeed({ activity }) {
     if (h < 24) return h + 'h';
     return Math.floor(h / 24) + 'd';
   };
-  const latest = activity.slice(0, 5);
+  const latest = (activity || []).slice(0, 5);
+  const unpin = (id) => setState(s => KD.unpin(s, id));
+
   return (
     <section className="v1-activity" style={{
       marginBottom: 20, padding: '10px 14px', background: P.accentSoft,
       borderRadius: 12, border: `1px solid ${P.line}`,
       display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap',
     }}>
-      <span className="va-mono" style={{
-        fontSize: 10, letterSpacing: 2, textTransform: 'uppercase',
-        color: P.accent, fontWeight: 600, flexShrink: 0,
-      }}>Recent</span>
+      <style>{`
+        .v1-pin-chip {
+          display: inline-flex; align-items: center; gap: 6px;
+          padding: 3px 4px 3px 9px;
+          border-radius: 999px;
+          background: var(--kd-card);
+          border: 1px solid var(--kd-line-mid);
+          border-left: 2px solid var(--kd-accent);
+          font-size: 12px; color: var(--kd-ink);
+          max-width: 280px;
+          cursor: pointer;
+          transition: background 0.15s ease, transform 0.15s ease;
+        }
+        .v1-pin-chip:hover { background: var(--kd-hover); transform: translateY(-1px); }
+        .v1-pin-chip-text {
+          font-weight: 500;
+          overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+          max-width: 200px;
+        }
+        .v1-pin-chip-btn {
+          all: unset; cursor: pointer;
+          width: 18px; height: 18px;
+          display: inline-flex; align-items: center; justify-content: center;
+          border-radius: 50%;
+          color: var(--kd-dim);
+          transition: background 0.15s ease, color 0.15s ease;
+        }
+        .v1-pin-chip-btn:hover { background: var(--kd-hover); }
+        .v1-pin-chip-btn.is-done:hover { color: var(--kd-success); }
+        .v1-pin-chip-btn.is-x:hover    { color: var(--kd-danger); }
+      `}</style>
+
+      {hasPinned && (
+        <>
+          <span className="va-mono" style={{
+            fontSize: 10, letterSpacing: 2, textTransform: 'uppercase',
+            color: P.accent, fontWeight: 700, flexShrink: 0,
+            display: 'inline-flex', alignItems: 'center', gap: 6,
+          }}>
+            <span style={{ display: 'inline-block' }}>▶</span>
+            Now <span style={{ color: P.dimSoft, fontWeight: 600 }}>{pinnedCards.length}/3</span>
+          </span>
+          {pinnedCards.map(({ task, lane }) => (
+            <span key={task.id} className="v1-pin-chip" onClick={() => onOpenTask(task, lane)} title="Open task">
+              <span className="va-mono" style={{ fontSize: 9, color: P.dim, fontWeight: 700, letterSpacing: 1 }}>{lane}</span>
+              <span className="v1-pin-chip-text">{task.text}</span>
+              <span style={{ display: 'inline-flex', gap: 1 }} onClick={e => e.stopPropagation()}>
+                <button className="v1-pin-chip-btn is-done" onClick={() => onToggleCheck(task.id)} title="Mark done" aria-label="Mark done">
+                  <svg width="11" height="11" viewBox="0 0 12 12"><path d="M2 6.5L5 9.5L10 3" stroke="currentColor" strokeWidth="1.6" fill="none" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                </button>
+                <button className="v1-pin-chip-btn is-x" onClick={() => unpin(task.id)} title="Unpin" aria-label="Unpin"
+                  style={{ fontFamily: "'JetBrains Mono', ui-monospace, monospace", fontSize: 12, lineHeight: 1, fontWeight: 700 }}>×</button>
+              </span>
+            </span>
+          ))}
+        </>
+      )}
+
+      {hasPinned && hasActivity && (
+        <span aria-hidden="true" style={{
+          width: 1, height: 18, background: P.lineMid, flexShrink: 0,
+        }}/>
+      )}
+
+      {hasActivity && (
+        <span className="va-mono" style={{
+          fontSize: 10, letterSpacing: 2, textTransform: 'uppercase',
+          color: P.accent, fontWeight: 600, flexShrink: 0,
+        }}>Recent</span>
+      )}
       {latest.map((a, i) => (
         <span key={a.id || i} className="va-sans" style={{
           fontSize: 12, color: P.dimStrong, display: 'flex', alignItems: 'baseline', gap: 6,
@@ -615,7 +700,8 @@ function StatusDot({ status }) {
   );
 }
 
-function Lane({ title, lane, visible, filterASAP, catFilter, collapsedGroups, onToggleGroup, state, setState, onOpen, onAdd, onToggle, categories }) {
+function Lane({ title, lane, visible, filterASAP, catFilter, collapsedGroups, onToggleGroup, state, setState, onOpen, onAdd, onToggle, onTogglePin, categories }) {
+  const pinnedSet = new Set(state.pinned || []);
   if (!visible) return <div/>;
   const lp = KD.laneProgress(state, lane);
   let tasks = state.lanes[lane];
@@ -701,10 +787,12 @@ function Lane({ title, lane, visible, filterASAP, catFilter, collapsedGroups, on
                 {groupTasks.map(t => (
                   <TaskRow key={t.id} t={t} lane={lane}
                     checked={!!state.checked[t.id]}
+                    pinned={pinnedSet.has(t.id)}
+                    pinnedCount={(state.pinned || []).length}
                     hasNotes={!!(state.notes[t.id] && (state.notes[t.id].text || (state.notes[t.id].comments||[]).length))}
                     commentCount={(state.notes[t.id]?.comments||[]).length}
                     linkedLineCount={state.money.lines.filter(l => (l.taskIds||[]).includes(t.id)).length}
-                    onOpen={onOpen} onToggle={onToggle} categories={categories}
+                    onOpen={onOpen} onToggle={onToggle} onTogglePin={onTogglePin} categories={categories}
                   />
                 ))}
               </div>
@@ -762,7 +850,9 @@ function QuickAddTask({ lane, setState, onMore }) {
   );
 }
 
-function TaskRow({ t, checked, hasNotes, commentCount, linkedLineCount = 0, onOpen, onToggle, categories }) {
+function TaskRow({ t, checked, pinned = false, pinnedCount = 0, hasNotes, commentCount, linkedLineCount = 0, onOpen, onToggle, onTogglePin, categories }) {
+  const canPin = pinned || pinnedCount < 3;
+  const pinDisabled = !pinned && !canPin;
   return (
     <div
       className="va-sans v1-task-row"
@@ -770,9 +860,10 @@ function TaskRow({ t, checked, hasNotes, commentCount, linkedLineCount = 0, onOp
         display: 'grid', gridTemplateColumns: '20px 1fr auto', gap: 10,
         padding: '9px 8px', borderRadius: 8, cursor: 'pointer',
         transition: 'background .12s',
+        background: pinned ? P.accentSoft : 'transparent',
       }}
-      onMouseEnter={e => e.currentTarget.style.background = P.hover}
-      onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+      onMouseEnter={e => { if (!pinned) e.currentTarget.style.background = P.hover; }}
+      onMouseLeave={e => { e.currentTarget.style.background = pinned ? P.accentSoft : 'transparent'; }}
       onClick={() => onOpen(t)}
     >
       <div className="v1-task-check" onClick={e => { e.stopPropagation(); onToggle(t.id); }} style={{
@@ -804,7 +895,7 @@ function TaskRow({ t, checked, hasNotes, commentCount, linkedLineCount = 0, onOp
         </div>
       </div>
       <div style={{
-        display: 'flex', alignItems: 'flex-start', gap: 4, paddingTop: 2,
+        display: 'flex', alignItems: 'center', gap: 6, paddingTop: 2,
         color: P.dimSoft, fontSize: 11,
       }}>
         {commentCount > 0 && (
@@ -815,6 +906,31 @@ function TaskRow({ t, checked, hasNotes, commentCount, linkedLineCount = 0, onOp
         )}
         {hasNotes && !commentCount && (
           <span title="Has notes" style={{ display: 'inline-block', width: 6, height: 6, borderRadius: 999, background: P.accent }}/>
+        )}
+        {!checked && onTogglePin && (
+          <button
+            className="v1-task-pin"
+            onClick={e => { e.stopPropagation(); if (!pinDisabled) onTogglePin(t.id); }}
+            disabled={pinDisabled}
+            title={pinned ? 'Click to unpin' : pinDisabled ? '3 tasks already pinned — unpin one first' : 'Pin as in progress'}
+            aria-label={pinned ? 'Unpin' : 'Pin as in progress'}
+            style={{
+              border: `1px solid ${pinned ? P.accent : P.lineMid}`,
+              background: pinned ? P.accent : P.card,
+              cursor: pinDisabled ? 'not-allowed' : 'pointer',
+              padding: '3px 8px', borderRadius: 999,
+              color: pinned ? P.card : P.dimStrong,
+              opacity: pinDisabled ? 0.4 : 1,
+              fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+              fontSize: 9, lineHeight: 1, fontWeight: 700, letterSpacing: 1,
+              textTransform: 'uppercase',
+              display: 'inline-flex', alignItems: 'center', gap: 4,
+              transition: 'background 0.15s ease, color 0.15s ease, border-color 0.15s ease',
+            }}
+          >
+            <span style={{ fontSize: 10 }}>{pinned ? '◉' : '○'}</span>
+            {pinned ? 'Pinned' : 'Pin'}
+          </button>
         )}
       </div>
     </div>
