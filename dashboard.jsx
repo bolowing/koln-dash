@@ -545,31 +545,59 @@ function ActivityFeed({ activity, state, setState, onOpenTask, onToggleCheck }) 
   const fmtAgo = (iso) => {
     const diff = Date.now() - new Date(iso).getTime();
     const m = Math.floor(diff / 60000);
-    if (m < 1) return 'just now';
+    if (m < 1) return 'now';
     if (m < 60) return m + 'm';
     const h = Math.floor(m / 60);
     if (h < 24) return h + 'h';
     return Math.floor(h / 24) + 'd';
   };
-  const latest = (activity || []).slice(0, 5);
+  // Compress wordy verbs to a single glyph so the ticker fits on one line.
+  const verbGlyph = (verb) => {
+    const v = (verb || '').toLowerCase();
+    if (v.includes('complet')) return '✓';
+    if (v.includes('comment')) return '💬';
+    if (v.includes('line'))    return '€';
+    return '+'; // 'added task' and unknowns
+  };
+  const latest = (activity || []).slice(0, 4);
   const unpin = (id) => setState(s => KD.unpin(s, id));
 
   return (
-    <section className="v1-activity" style={{
-      marginBottom: 20, padding: '10px 14px', background: P.accentSoft,
-      borderRadius: 12, border: `1px solid ${P.line}`,
-      display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap',
-    }}>
+    <section className="v1-activity">
       <style>{`
-        .v1-pin-chip {
+        /* Single-line ticker — no wrap, fade-out on the right edge so
+           overflow looks intentional instead of clipped. */
+        .v1-activity {
+          position: relative;
+          margin-bottom: 20px;
+          padding: 10px 24px 10px 14px;
+          background: var(--kd-accent-soft);
+          border-radius: 12px;
+          border: 1px solid var(--kd-line);
+          display: flex; align-items: center; gap: 12px;
+          flex-wrap: nowrap; overflow: hidden;
+          min-width: 0;
+          mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 28px), transparent 100%);
+          -webkit-mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 28px), transparent 100%);
+        }
+        .v1-activity-eyebrow {
+          font-family: 'JetBrains Mono', ui-monospace, monospace;
+          font-size: 9.5px; letter-spacing: 2px; text-transform: uppercase;
+          color: var(--kd-accent); font-weight: 700; flex-shrink: 0;
           display: inline-flex; align-items: center; gap: 6px;
-          padding: 3px 4px 3px 9px;
+        }
+        .v1-activity-divider {
+          width: 1px; height: 16px; background: var(--kd-line-mid); flex-shrink: 0;
+        }
+        .v1-pin-chip {
+          display: inline-flex; align-items: center; gap: 5px;
+          padding: 3px 4px 3px 8px;
           border-radius: 999px;
           background: var(--kd-card);
           border: 1px solid var(--kd-line-mid);
           border-left: 2px solid var(--kd-accent);
           font-size: 12px; color: var(--kd-ink);
-          max-width: 280px;
+          flex-shrink: 0;
           cursor: pointer;
           transition: background 0.15s ease, transform 0.15s ease;
         }
@@ -577,7 +605,7 @@ function ActivityFeed({ activity, state, setState, onOpenTask, onToggleCheck }) 
         .v1-pin-chip-text {
           font-weight: 500;
           overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-          max-width: 200px;
+          max-width: 160px;
         }
         .v1-pin-chip-btn {
           all: unset; cursor: pointer;
@@ -590,20 +618,48 @@ function ActivityFeed({ activity, state, setState, onOpenTask, onToggleCheck }) 
         .v1-pin-chip-btn:hover { background: var(--kd-hover); }
         .v1-pin-chip-btn.is-done:hover { color: var(--kd-success); }
         .v1-pin-chip-btn.is-x:hover    { color: var(--kd-danger); }
+        /* Recent items: tight grouping, no wrapping inside an item */
+        .v1-act-item {
+          font-family: 'Figtree', sans-serif;
+          font-size: 12px; color: var(--kd-dim-strong);
+          display: inline-flex; align-items: baseline; gap: 5px;
+          flex-shrink: 0; white-space: nowrap;
+        }
+        .v1-act-item .author {
+          color: var(--kd-ink); font-weight: 600;
+          font-family: 'JetBrains Mono', ui-monospace, monospace;
+          font-size: 10px; letter-spacing: 0.5px;
+        }
+        .v1-act-item .glyph {
+          color: var(--kd-accent); font-weight: 700;
+          font-size: 11px;
+        }
+        .v1-act-item .target {
+          color: var(--kd-ink);
+          overflow: hidden; text-overflow: ellipsis;
+          max-width: 140px;
+          display: inline-block; vertical-align: bottom;
+        }
+        .v1-act-item .ago {
+          color: var(--kd-dim-soft); font-size: 9.5px;
+          font-family: 'JetBrains Mono', ui-monospace, monospace;
+          letter-spacing: 0.5px;
+        }
+        .v1-act-item + .v1-act-item {
+          margin-left: 4px;
+          padding-left: 12px;
+          border-left: 1px solid var(--kd-line);
+        }
       `}</style>
 
       {hasPinned && (
         <>
-          <span className="va-mono" style={{
-            fontSize: 10, letterSpacing: 2, textTransform: 'uppercase',
-            color: P.accent, fontWeight: 700, flexShrink: 0,
-            display: 'inline-flex', alignItems: 'center', gap: 6,
-          }}>
-            <span style={{ display: 'inline-block' }}>▶</span>
+          <span className="v1-activity-eyebrow">
+            <span aria-hidden="true">▶</span>
             Now <span style={{ color: P.dimSoft, fontWeight: 600 }}>{pinnedCards.length}/3</span>
           </span>
           {pinnedCards.map(({ task, lane }) => (
-            <span key={task.id} className="v1-pin-chip" onClick={() => onOpenTask(task, lane)} title="Open task">
+            <span key={task.id} className="v1-pin-chip" onClick={() => onOpenTask(task, lane)} title={`${lane} · ${task.text}`}>
               <span className="va-mono" style={{ fontSize: 9, color: P.dim, fontWeight: 700, letterSpacing: 1 }}>{lane}</span>
               <span className="v1-pin-chip-text">{task.text}</span>
               <span style={{ display: 'inline-flex', gap: 1 }} onClick={e => e.stopPropagation()}>
@@ -618,27 +674,21 @@ function ActivityFeed({ activity, state, setState, onOpenTask, onToggleCheck }) 
         </>
       )}
 
-      {hasPinned && hasActivity && (
-        <span aria-hidden="true" style={{
-          width: 1, height: 18, background: P.lineMid, flexShrink: 0,
-        }}/>
-      )}
+      {hasPinned && hasActivity && <span className="v1-activity-divider" aria-hidden="true"/>}
 
       {hasActivity && (
-        <span className="va-mono" style={{
-          fontSize: 10, letterSpacing: 2, textTransform: 'uppercase',
-          color: P.accent, fontWeight: 600, flexShrink: 0,
-        }}>Recent</span>
+        <span className="v1-activity-eyebrow">Recent</span>
       )}
       {latest.map((a, i) => (
-        <span key={a.id || i} className="va-sans" style={{
-          fontSize: 12, color: P.dimStrong, display: 'flex', alignItems: 'baseline', gap: 6,
-          minWidth: 0,
-        }}>
-          <strong style={{ color: P.ink, fontWeight: 600 }}>{a.author}</strong>
-          <span style={{ color: P.dim }}>{a.verb}</span>
-          <span style={{ color: P.ink, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 220 }}>{a.target}</span>
-          <span style={{ color: P.dimSoft, fontSize: 10 }}>· {fmtAgo(a.at)}</span>
+        <span
+          key={a.id || i}
+          className="v1-act-item"
+          title={`${a.author} ${a.verb} ${a.target}`}
+        >
+          <span className="author">{a.author}</span>
+          <span className="glyph" aria-label={a.verb}>{verbGlyph(a.verb)}</span>
+          <span className="target">{a.target}</span>
+          <span className="ago">· {fmtAgo(a.at)}</span>
         </span>
       ))}
     </section>
