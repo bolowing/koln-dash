@@ -420,6 +420,19 @@ function OverallProgress({ state }) {
           transition: background 0.15s, color 0.15s;
         }
         .kd-bubble-btn:hover { background: ${P.accent}; color: #fff; border-color: ${P.accent}; }
+        /* Bubble tracks the dude on desktop, but at narrow widths the
+           bubble width approaches the container width — overflows past
+           the left edge. Pin centered on mobile. */
+        .kd-dude-bubble {
+          left: var(--kd-bubble-left, 50%);
+        }
+        .kd-dude-pointer {
+          left: var(--kd-pointer-left, 50%);
+        }
+        @media (max-width: 720px) {
+          .kd-dude-bubble  { left: 50% !important; width: min(320px, 96%) !important; }
+          .kd-dude-pointer { left: 50% !important; }
+        }
       `}</style>
 
       <div style={{
@@ -439,15 +452,18 @@ function OverallProgress({ state }) {
 
       <div style={{ position: 'relative', minHeight: 168, paddingTop: showTip ? 132 : 108 }}>
         {/* Speech bubble — wider, multi-line, interactive */}
-        <div key={cycle} style={{
-          position: 'absolute',
-          left: `${bubblePos}%`,
-          top: 0,
-          transform: 'translateX(-50%)',
-          width: 'min(360px, 92%)',
-          animation: 'kd-bubble-in 0.35s ease',
-          zIndex: 3,
-        }}>
+        <div
+          key={cycle}
+          className="kd-dude-bubble"
+          style={{
+            position: 'absolute',
+            ['--kd-bubble-left']: `${bubblePos}%`,
+            top: 0,
+            transform: 'translateX(-50%)',
+            width: 'min(360px, 92%)',
+            animation: 'kd-bubble-in 0.35s ease',
+            zIndex: 3,
+          }}>
           <div className="va-sans" style={{
             position: 'relative',
             background: P.card,
@@ -519,16 +535,18 @@ function OverallProgress({ state }) {
               </div>
             )}
             {/* Pointer */}
-            <div style={{
-              position: 'absolute',
-              left: `${Math.max(8, Math.min(92, 50 + (dudePos - bubblePos)))}%`,
-              bottom: -6,
-              transform: 'translateX(-50%) rotate(45deg)',
-              width: 10, height: 10,
-              background: P.card,
-              borderRight: `1px solid ${P.lineMid}`,
-              borderBottom: `1px solid ${P.lineMid}`,
-            }}/>
+            <div
+              className="kd-dude-pointer"
+              style={{
+                position: 'absolute',
+                ['--kd-pointer-left']: `${Math.max(8, Math.min(92, 50 + (dudePos - bubblePos)))}%`,
+                bottom: -6,
+                transform: 'translateX(-50%) rotate(45deg)',
+                width: 10, height: 10,
+                background: P.card,
+                borderRight: `1px solid ${P.lineMid}`,
+                borderBottom: `1px solid ${P.lineMid}`,
+              }}/>
           </div>
         </div>
 
