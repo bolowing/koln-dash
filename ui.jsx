@@ -573,6 +573,537 @@ function OverallProgress({ state }) {
   );
 }
 
+// Reusable collapsible section. Stores collapse state by id under
+// state.ui.collapsed so it persists across reloads.
+function Section({ id, title, subtitle, headingSize = 22, headerRight, state, setState, children }) {
+  const collapsed = !!(state.ui && state.ui.collapsed && state.ui.collapsed[id]);
+  const toggle = () => setState(s => ({
+    ...s,
+    ui: { ...s.ui, collapsed: { ...(s.ui && s.ui.collapsed), [id]: !collapsed } },
+  }));
+  // Stop the headerRight click from collapsing the section (tab buttons etc).
+  const stop = (e) => e.stopPropagation();
+  return (
+    <section id={`sec-${id}`} style={{ marginBottom: collapsed ? 14 : 28, scrollMarginTop: 24 }}>
+      <div style={{
+        display: 'flex', alignItems: 'baseline', justifyContent: 'space-between',
+        gap: 14, marginBottom: collapsed ? 0 : 14, flexWrap: 'wrap',
+      }}>
+        <div
+          onClick={toggle}
+          style={{
+            display: 'flex', alignItems: 'baseline', flexWrap: 'wrap',
+            gap: 14, cursor: 'pointer', userSelect: 'none', flex: '1 1 auto',
+          }}>
+          <span aria-hidden="true" style={{
+            display: 'inline-block', width: 14, lineHeight: 1,
+            color: P.dim, fontSize: 12,
+            transform: collapsed ? 'rotate(-90deg)' : 'rotate(0deg)',
+            transition: 'transform 0.18s ease',
+          }}>▾</span>
+          <h2 className="v1-section-h2" style={{
+            fontSize: headingSize, fontWeight: 400, margin: 0,
+            letterSpacing: headingSize >= 28 ? -0.5 : -0.3,
+          }}>{title}</h2>
+          {subtitle && (
+            <span className="va-sans" style={{ fontSize: 12, color: P.dim }}>{subtitle}</span>
+          )}
+        </div>
+        {headerRight && !collapsed && (
+          <div onClick={stop}>{headerRight}</div>
+        )}
+      </div>
+      {!collapsed && children}
+    </section>
+  );
+}
+
+function TableOfContents({ state, setState, items }) {
+  const collapsed = (state.ui && state.ui.collapsed) || {};
+  const [activeId, setActiveId] = React.useState(items[0] && items[0].id);
+  const [scrollPct, setScrollPct] = React.useState(0);
+
+  // Track which section is in view via IntersectionObserver — drives the
+  // glowing dot that slides down the rail as you scroll.
+  React.useEffect(() => {
+    const els = items
+      .map(it => document.getElementById(`sec-${it.id}`))
+      .filter(Boolean);
+    if (!els.length) return;
+    const visible = new Map();
+    const obs = new IntersectionObserver((entries) => {
+      entries.forEach(e => visible.set(e.target.id, e.intersectionRatio));
+      // Pick whichever section currently has the highest visibility ratio.
+      let topId = null, topRatio = 0;
+      visible.forEach((ratio, id) => {
+        if (ratio > topRatio) { topRatio = ratio; topId = id; }
+      });
+      if (topId) setActiveId(topId.replace(/^sec-/, ''));
+    }, {
+      rootMargin: '-12% 0px -55% 0px',
+      threshold: [0, 0.25, 0.5, 0.75, 1],
+    });
+    els.forEach(el => obs.observe(el));
+    return () => obs.disconnect();
+  }, [items]);
+
+  // Page scroll progress — fills the left rail behind the dot.
+  React.useEffect(() => {
+    const onScroll = () => {
+      const h = document.documentElement;
+      const max = (h.scrollHeight - h.clientHeight) || 1;
+      setScrollPct(Math.min(100, Math.max(0, (h.scrollTop || window.scrollY) / max * 100)));
+    };
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  const toggle = (id) => setState(s => ({
+    ...s,
+    ui: { ...s.ui, collapsed: { ...(s.ui && s.ui.collapsed), [id]: !collapsed[id] } },
+  }));
+  const scrollToSection = (id) => {
+    const el = document.getElementById(`sec-${id}`);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  // Dot tracks active item along the rail. Computed by index in the list.
+  const activeIdx = Math.max(0, items.findIndex(it => it.id === activeId));
+  const dotPct = items.length > 1 ? (activeIdx / (items.length - 1)) * 100 : 0;
+
+  return (
+    <nav className="v1-toc" aria-label="Sections">
+      <style>{`
+        .v1-toc {
+          position: sticky;
+          top: 24px;
+          padding: 18px 14px 14px 18px;
+          border-radius: 14px;
+          background:
+            radial-gradient(140% 90% at 0% 0%, rgba(193,74,28,0.04) 0%, transparent 55%),
+            linear-gradient(180deg, rgba(255,250,241,0.92), rgba(251,245,233,0.88));
+          border: 1px solid rgba(26,18,10,0.10);
+          box-shadow:
+            0 1px 0 rgba(255,255,255,0.6) inset,
+            0 12px 28px -18px rgba(58,40,18,0.35),
+            0 2px 6px -2px rgba(58,40,18,0.10);
+          backdrop-filter: saturate(1.1) blur(6px);
+          -webkit-backdrop-filter: saturate(1.1) blur(6px);
+        }
+        .v1-toc::before {
+          content: "";
+          position: absolute; inset: 0;
+          border-radius: 14px;
+          pointer-events: none;
+          background-image: radial-gradient(rgba(26,18,10,0.05) 1px, transparent 1px);
+          background-size: 6px 6px;
+          opacity: 0.5;
+          mix-blend-mode: multiply;
+        }
+        .v1-toc-eyebrow {
+          font-family: 'JetBrains Mono', ui-monospace, monospace;
+          font-size: 9px;
+          letter-spacing: 2px;
+          text-transform: uppercase;
+          color: ${P.accent};
+          font-weight: 700;
+          display: flex; align-items: center; gap: 6px;
+          margin-bottom: 14px;
+          padding-left: 22px;
+        }
+        .v1-toc-eyebrow::before {
+          content: "§";
+          font-family: 'Bricolage Grotesque', serif;
+          font-size: 14px;
+          line-height: 1;
+          color: ${P.accent};
+          opacity: 0.85;
+        }
+        .v1-toc-list {
+          list-style: none; margin: 0; padding: 0;
+          position: relative;
+        }
+        /* The vertical rail behind everything */
+        .v1-toc-rail {
+          position: absolute;
+          left: 5px; top: 6px; bottom: 6px;
+          width: 1px;
+          background: rgba(26,18,10,0.12);
+          border-radius: 1px;
+          overflow: visible;
+        }
+        .v1-toc-rail::after {
+          content: "";
+          position: absolute;
+          left: -0.5px; top: 0;
+          width: 2px;
+          height: var(--scroll-pct, 0%);
+          background: linear-gradient(180deg, ${P.accent}, #8a3014);
+          border-radius: 2px;
+          transition: height 0.18s ease-out;
+        }
+        .v1-toc-dot {
+          position: absolute;
+          left: -3.5px;
+          top: var(--dot-top, 0%);
+          width: 9px; height: 9px;
+          background: ${P.accent};
+          border: 2px solid ${P.card};
+          border-radius: 50%;
+          box-shadow:
+            0 0 0 1px ${P.accent},
+            0 0 0 4px rgba(193,74,28,0.18),
+            0 0 12px rgba(193,74,28,0.5);
+          transition: top 0.45s cubic-bezier(.5,.1,.2,1);
+          pointer-events: none;
+        }
+        .v1-toc-row {
+          position: relative;
+          display: grid;
+          grid-template-columns: 22px 1fr 18px;
+          align-items: baseline;
+          column-gap: 4px;
+          padding: 5px 0 5px 0;
+        }
+        .v1-toc-num {
+          font-family: 'JetBrains Mono', ui-monospace, monospace;
+          font-size: 9px;
+          color: ${P.dimSoft};
+          letter-spacing: 0.5px;
+          padding-left: 14px;
+          font-variant-numeric: tabular-nums;
+          transition: color 0.2s ease;
+        }
+        .v1-toc-link {
+          all: unset;
+          cursor: pointer;
+          font-family: 'Bricolage Grotesque', system-ui, sans-serif;
+          font-size: 13.5px;
+          font-weight: 400;
+          letter-spacing: -0.1px;
+          line-height: 1.3;
+          color: ${P.dimStrong};
+          padding: 2px 0;
+          transition: color 0.18s ease, transform 0.25s cubic-bezier(.4,.5,.3,1), letter-spacing 0.25s ease;
+        }
+        .v1-toc-link:hover {
+          color: ${P.ink};
+          transform: translateX(2px);
+        }
+        .v1-toc-row.is-active .v1-toc-link {
+          color: ${P.ink};
+          font-weight: 500;
+          letter-spacing: 0;
+        }
+        .v1-toc-row.is-active .v1-toc-num {
+          color: ${P.accent};
+          font-weight: 700;
+        }
+        .v1-toc-row.is-collapsed .v1-toc-link {
+          color: ${P.dim};
+          text-decoration: line-through;
+          text-decoration-color: rgba(26,18,10,0.18);
+          text-decoration-thickness: 1px;
+        }
+        .v1-toc-toggle {
+          all: unset;
+          cursor: pointer;
+          width: 16px; height: 16px;
+          display: inline-flex; align-items: center; justify-content: center;
+          font-family: 'JetBrains Mono', ui-monospace, monospace;
+          font-size: 11px; line-height: 1;
+          color: ${P.dimSoft};
+          border-radius: 3px;
+          transition: color 0.15s ease, background 0.15s ease, transform 0.2s ease;
+        }
+        .v1-toc-toggle:hover {
+          color: ${P.accent};
+          background: rgba(193,74,28,0.08);
+          transform: scale(1.1);
+        }
+        .v1-toc-foot {
+          margin-top: 14px;
+          padding: 8px 0 0 22px;
+          border-top: 1px dashed rgba(26,18,10,0.12);
+          font-family: 'JetBrains Mono', ui-monospace, monospace;
+          font-size: 9px;
+          letter-spacing: 1px;
+          text-transform: uppercase;
+          color: ${P.dimSoft};
+          display: flex; justify-content: space-between; align-items: baseline;
+        }
+        .v1-toc-foot-pct {
+          color: ${P.accent};
+          font-weight: 700;
+          font-variant-numeric: tabular-nums;
+        }
+      `}</style>
+
+      <div className="v1-toc-eyebrow">Index</div>
+
+      <ul
+        className="v1-toc-list"
+        style={{ '--scroll-pct': `${scrollPct}%`, '--dot-top': `${dotPct}%` }}
+      >
+        <span className="v1-toc-rail" aria-hidden="true"/>
+        <span className="v1-toc-dot" aria-hidden="true"/>
+        {items.map(({ id, label }, i) => {
+          const isCollapsed = !!collapsed[id];
+          const isActive = id === activeId;
+          const cls = ['v1-toc-row'];
+          if (isActive) cls.push('is-active');
+          if (isCollapsed) cls.push('is-collapsed');
+          return (
+            <li key={id} className={cls.join(' ')}>
+              <span className="v1-toc-num">{String(i + 1).padStart(2, '0')}</span>
+              <button
+                className="v1-toc-link"
+                onClick={() => scrollToSection(id)}
+                aria-current={isActive ? 'true' : undefined}
+              >{label}</button>
+              <button
+                className="v1-toc-toggle"
+                onClick={() => toggle(id)}
+                title={isCollapsed ? 'Expand section' : 'Collapse section'}
+                aria-label={isCollapsed ? 'Expand section' : 'Collapse section'}
+              >{isCollapsed ? '+' : '−'}</button>
+            </li>
+          );
+        })}
+      </ul>
+
+      <div className="v1-toc-foot">
+        <span>Scroll</span>
+        <span className="v1-toc-foot-pct">{Math.round(scrollPct)}%</span>
+      </div>
+    </nav>
+  );
+}
+
+function BlockedAccount({ state, setState }) {
+  const b = state.blocked || {};
+  const total = b.totalEUR || 12063;
+  const monthly = b.monthlyReleaseEUR || 992;
+  const months = b.months || 12;
+  const deposited = Math.min(b.depositedEUR || 0, total);
+  const fundedPct = total > 0 ? (deposited / total) * 100 : 0;
+  const released = Math.max(0, Math.min(b.releasedCount || 0, months));
+  const releasedEUR = released * monthly;
+  const remainingEUR = (months - released) * monthly;
+
+  const update = (patch) => setState(s => ({ ...s, blocked: { ...s.blocked, ...patch } }));
+  const toggleStep = (id) => setState(s => ({
+    ...s,
+    blocked: {
+      ...s.blocked,
+      steps: (s.blocked.steps || []).map(st => st.id === id ? { ...st, done: !st.done } : st),
+    },
+  }));
+
+  const stepsDone = (b.steps || []).filter(s => s.done).length;
+  const stepsTotal = (b.steps || []).length;
+
+  return (
+    <div>
+      {/* Top: provider + funding bar */}
+      <div style={{
+        display: 'flex', alignItems: 'baseline', justifyContent: 'space-between',
+        gap: 12, flexWrap: 'wrap', marginBottom: 10,
+      }}>
+        <div>
+          <div className="va-mono" style={{
+            fontSize: 10, letterSpacing: 2, textTransform: 'uppercase',
+            color: P.accent, fontWeight: 600, marginBottom: 4,
+          }}>{b.provider || 'Fintiba'} · Sperrkonto</div>
+          <div className="va-sans" style={{ fontSize: 13, color: P.dimStrong }}>
+            Required deposit for the German student visa
+          </div>
+        </div>
+        <div className="va-sans" style={{ fontSize: 13, color: P.dimStrong, textAlign: 'right' }}>
+          <EditableNumber
+            value={deposited}
+            onChange={(v) => update({ depositedEUR: Math.max(0, v) })}
+            prefix="€"
+            style={{ fontWeight: 600, color: P.ink }}
+          />
+          <span style={{ color: P.dim }}> of €{total.toLocaleString('de-DE')} · </span>
+          <span style={{ color: P.accent, fontWeight: 600 }}>{Math.round(fundedPct)}%</span>
+        </div>
+      </div>
+      <div style={{ height: 8, borderRadius: 999, background: P.lineSoft, overflow: 'hidden', marginBottom: 18 }}>
+        <div style={{
+          width: `${fundedPct}%`, height: '100%',
+          background: 'linear-gradient(90deg, #c8985f 0%, #9b4722 100%)',
+          transition: 'width 0.7s cubic-bezier(.4,.6,.3,1)',
+          borderRadius: 999,
+        }}/>
+      </div>
+
+      {/* Flow diagram */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+        gap: 10, marginBottom: 22,
+      }}>
+        {[
+          { label: 'Wire €12,063', sub: `From US → Fintiba`, done: deposited >= total },
+          { label: `Blocked at ${b.provider || 'Fintiba'}`, sub: 'Held until activated', done: deposited >= total && b.activated },
+          { label: `€${monthly}/mo released`, sub: `${released} of ${months} so far`, done: released > 0 },
+          { label: 'Current account', sub: b.currentAccount || 'TBD — German bank', done: !!b.currentAccount },
+        ].map((step, i, arr) => (
+          <div key={i} style={{
+            position: 'relative',
+            background: step.done ? P.accentSoft : P.paper,
+            border: `1px solid ${step.done ? P.accent : P.lineMid}`,
+            borderRadius: 10, padding: '10px 12px',
+          }}>
+            <div className="va-mono" style={{
+              fontSize: 9, letterSpacing: 1.5, textTransform: 'uppercase',
+              color: step.done ? P.accent : P.dim, fontWeight: 700, marginBottom: 3,
+            }}>Step {i + 1}{step.done ? ' ✓' : ''}</div>
+            <div className="va-sans" style={{ fontSize: 13, color: P.ink, fontWeight: 600, lineHeight: 1.25 }}>
+              {step.label}
+            </div>
+            <div className="va-sans" style={{ fontSize: 11, color: P.dim, marginTop: 2, lineHeight: 1.3 }}>
+              {step.sub}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Monthly release timeline */}
+      <div style={{ marginBottom: 22 }}>
+        <div style={{
+          display: 'flex', justifyContent: 'space-between', alignItems: 'baseline',
+          marginBottom: 10, gap: 12, flexWrap: 'wrap',
+        }}>
+          <div className="va-mono" style={{
+            fontSize: 10, letterSpacing: 2, textTransform: 'uppercase',
+            color: P.accent, fontWeight: 600,
+          }}>Monthly releases</div>
+          <div className="va-sans" style={{ fontSize: 13, color: P.dimStrong }}>
+            <span style={{ fontWeight: 600, color: P.ink }}>€{releasedEUR.toLocaleString('de-DE')}</span>
+            <span style={{ color: P.dim }}> released · </span>
+            <span style={{ color: P.dim }}>€{remainingEUR.toLocaleString('de-DE')} to come</span>
+          </div>
+        </div>
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: `repeat(${months}, minmax(0, 1fr))`,
+          gap: 4,
+        }}>
+          {Array.from({ length: months }).map((_, i) => {
+            const done = i < released;
+            return (
+              <button
+                key={i}
+                onClick={() => update({ releasedCount: done ? i : i + 1 })}
+                title={`Month ${i + 1}: ${done ? 'released' : 'pending'} · €${monthly}`}
+                style={{
+                  cursor: 'pointer',
+                  background: done ? P.accent : P.lineSoft,
+                  border: `1px solid ${done ? P.accent : P.lineMid}`,
+                  borderRadius: 6,
+                  padding: '8px 0 6px',
+                  color: done ? '#fff' : P.dim,
+                  font: 'inherit',
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
+                  transition: 'background 0.15s, color 0.15s',
+                }}>
+                <div className="va-mono" style={{ fontSize: 9, letterSpacing: 0.5, fontWeight: 700 }}>M{i + 1}</div>
+                <div style={{ fontSize: 10, fontWeight: 600 }}>€{monthly}</div>
+              </button>
+            );
+          })}
+        </div>
+        <div className="va-sans" style={{ fontSize: 11, color: P.dim, marginTop: 6, fontStyle: 'italic' }}>
+          Click a month to mark it released. First release happens after Anmeldung + visa activation.
+        </div>
+      </div>
+
+      {/* Two-column: facts + checklist */}
+      <div style={{
+        display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 22,
+      }}>
+        <div>
+          <div className="va-mono" style={{
+            fontSize: 10, letterSpacing: 2, textTransform: 'uppercase',
+            color: P.accent, fontWeight: 600, marginBottom: 10,
+          }}>Key facts</div>
+          <div className="va-sans" style={{ fontSize: 13, color: P.ink, lineHeight: 1.6 }}>
+            <FactRow label="Provider" value={b.provider || 'Fintiba'}/>
+            <FactRow label="Total deposit" value={`€${total.toLocaleString('de-DE')}`}/>
+            <FactRow label="Monthly release" value={`€${monthly} × ${months}`}/>
+            <FactRow label="Setup fee" value="€89 (one-time)"/>
+            <FactRow label="Maintenance" value="≈ €4.90 / month"/>
+            <FactRow label="Activation" value="After Anmeldung + visa"/>
+            <FactRow label="Current account" value={
+              <EditableText
+                value={b.currentAccount || ''}
+                onChange={(v) => update({ currentAccount: v })}
+                placeholder="N26 / Sparkasse / …"
+              />
+            }/>
+            <FactRow label="German phone" value={
+              <EditableText
+                value={b.germanPhone || ''}
+                onChange={(v) => update({ germanPhone: v })}
+                placeholder="+49 …"
+              />
+            }/>
+          </div>
+        </div>
+
+        <div>
+          <div style={{
+            display: 'flex', justifyContent: 'space-between', alignItems: 'baseline',
+            marginBottom: 10, gap: 8,
+          }}>
+            <div className="va-mono" style={{
+              fontSize: 10, letterSpacing: 2, textTransform: 'uppercase',
+              color: P.accent, fontWeight: 600,
+            }}>Checklist</div>
+            <div className="va-mono" style={{ fontSize: 10, color: P.dim, letterSpacing: 0.5 }}>
+              {stepsDone}/{stepsTotal}
+            </div>
+          </div>
+          <div className="va-sans" style={{ fontSize: 13, color: P.ink }}>
+            {(b.steps || []).map(step => (
+              <label key={step.id} style={{
+                display: 'flex', alignItems: 'center', gap: 8,
+                padding: '6px 0', cursor: 'pointer',
+                color: step.done ? P.dim : P.ink,
+                textDecoration: step.done ? 'line-through' : 'none',
+              }}>
+                <input
+                  type="checkbox"
+                  checked={!!step.done}
+                  onChange={() => toggleStep(step.id)}
+                  style={{ accentColor: P.accent, cursor: 'pointer' }}
+                />
+                <span style={{ lineHeight: 1.4 }}>{step.label}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function FactRow({ label, value }) {
+  return (
+    <div style={{
+      display: 'grid', gridTemplateColumns: '110px 1fr', gap: 8,
+      padding: '4px 0', borderBottom: `1px solid ${P.lineSoft}`,
+    }}>
+      <span style={{ color: P.dim, fontSize: 12 }}>{label}</span>
+      <span style={{ color: P.ink, fontSize: 13 }}>{value}</span>
+    </div>
+  );
+}
+
 function FundingProgress({ sentEUR, totalEUR }) {
   const pct = totalEUR > 0 ? (sentEUR / totalEUR) * 100 : 0;
   const pctRounded = Math.round(pct);
