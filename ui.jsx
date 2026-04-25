@@ -212,49 +212,60 @@ function GermanDude({ size = 52, hopping = false, waving = false }) {
 // selection by what the user is actually working on.
 const GERMAN_PHRASES = {
   greetings: [
-    { de: "Servus!",            en: "Hi! / Bye! (Bavarian)",        say: "ZER-voos",            tip: "Casual hello in the south. In Köln you'd say Hallo or Tach." },
-    { de: "Tach!",              en: "Hey! (Kölsch)",                say: "tahkh",               tip: "The proper Cologne greeting. Short for 'Guten Tag'." },
-    { de: "Wie geht's?",        en: "How's it going?",              say: "vee gates",           tip: "Reply: 'Gut, danke' — good, thanks." },
-    { de: "Tschüss!",           en: "Bye!",                         say: "chooss",              tip: "Universal casual goodbye." },
-    { de: "Bis später!",        en: "See you later!",               say: "biss SHPAY-tuh",      tip: "Friendly sign-off." },
-    { de: "Danke schön.",       en: "Thank you.",                   say: "DAHN-kuh shurn",     tip: "Reply: 'Bitte schön' — you're welcome." },
-    { de: "Entschuldigung.",    en: "Excuse me / Sorry.",           say: "ent-SHOOL-dee-goong", tip: "Works for both bumping into someone and getting attention." },
+    { de: "Hallo!",          en: "Hello!",                     say: "HAH-loh",           tip: "Works any time of day, with anyone. Safe default." },
+    { de: "Guten Morgen!",   en: "Good morning!",              say: "GOO-tun MOR-gun",   tip: "Until about 11am. After that, switch to 'Guten Tag'." },
+    { de: "Guten Tag!",      en: "Good day!",                  say: "GOO-tun tahk",      tip: "Polite, neutral. Use with strangers, shopkeepers, anyone older." },
+    { de: "Tschüss!",        en: "Bye!",                       say: "chooss",            tip: "Universal casual goodbye. Even the Tagesschau anchors say it." },
+    { de: "Bis später!",     en: "See you later!",             say: "biss SHPAY-tuh",    tip: "Friendly sign-off when you'll see them soon." },
+    { de: "Bis morgen!",     en: "See you tomorrow!",          say: "biss MOR-gun",      tip: "End-of-workday classic." },
+    { de: "Servus!",         en: "Hi/Bye! (southern)",         say: "ZER-voos",          tip: "Bavaria/Austria flavor. In Köln, locals say 'Tach'." },
   ],
-  bureaucracy: [
-    { de: "Ich möchte einen Termin.",           en: "I'd like an appointment.",       say: "ikh MURKH-tuh I-nun ter-MEEN", tip: "Magic words at the Bürgeramt. Nothing happens without a Termin." },
-    { de: "Ich möchte mich anmelden.",          en: "I'd like to register.",          say: "ikh MURKH-tuh mikh AHN-mel-dun", tip: "What you say at the Bürgeramt within 14 days of moving in." },
-    { de: "Wo ist das Bürgeramt?",              en: "Where is the citizens' office?", say: "voh ist dahss BUR-guh-rahmt", tip: "Your home base for registration, ID, everything official." },
-    { de: "Ich habe einen Termin um zehn Uhr.", en: "I have an appointment at 10.",   say: "ikh HAH-buh I-nun ter-MEEN oom tsayn oor", tip: "Always announce your Termin at the desk." },
-    { de: "Ich verstehe nur Bahnhof.",          en: "I understand only 'train station'.", say: "ikh fer-SHTAY-uh noor BAHN-hofe", tip: "Idiom for 'I have no clue what you're saying'. Officials will smile." },
-    { de: "Können Sie das wiederholen?",        en: "Can you repeat that?",           say: "KUR-nun zee dahss vee-duh-HOH-lun", tip: "Useful when the Beamter speaks at warp speed." },
-  ],
-  apartment: [
-    { de: "Ist die Wohnung noch frei?",   en: "Is the apartment still available?", say: "ist dee VOH-noong nokh fry", tip: "First line of every apartment-hunt email." },
-    { de: "Wann kann ich besichtigen?",    en: "When can I view it?",               say: "vahn kahn ikh buh-ZIKH-tee-gun", tip: "Besichtigung = the viewing appointment." },
-    { de: "Wie hoch ist die Warmmiete?",   en: "What's the warm rent?",             say: "vee hohkh ist dee VARM-mee-tuh", tip: "Warmmiete includes utilities. Kaltmiete doesn't. Always ask warm." },
-    { de: "Kaution?",                      en: "Deposit?",                          say: "kow-tsee-OWN",        tip: "Usually 2–3 months cold rent. Non-negotiable." },
-    { de: "Schufa-Auskunft",               en: "Credit report",                     say: "SHOO-fah OWS-koonft", tip: "Landlords will ask. Get yours at meineschufa.de." },
-  ],
-  cafe: [
-    { de: "Ein Kölsch, bitte.",       en: "One Kölsch, please.",        say: "ine kurlsh BIT-tuh",   tip: "The local beer. Comes in tiny 0.2L glasses — keeps it fresh." },
-    { de: "Noch eins, bitte!",        en: "Another one, please!",       say: "nokh ines BIT-tuh",    tip: "The waiter (Köbes) will keep refilling until you put the coaster on top." },
-    { de: "Die Rechnung, bitte.",     en: "The bill, please.",          say: "dee REKH-noong BIT-tuh", tip: "Tip ~10% — say the rounded total when you pay, don't leave coins on the table." },
-    { de: "Zum Mitnehmen.",           en: "To take away.",              say: "tsoom MIT-nay-mun",    tip: "Versus 'zum hier essen' — to eat here." },
-    { de: "Prost!",                   en: "Cheers!",                    say: "prohst",               tip: "Look people in the eye when you clink. Otherwise: 7 years bad luck." },
-    { de: "Guten Appetit!",           en: "Enjoy your meal!",           say: "GOO-tun ah-puh-TEET",  tip: "Said before eating. Reply: 'Danke, gleichfalls' — same to you." },
-  ],
-  transit: [
-    { de: "Wo ist die nächste Haltestelle?", en: "Where's the nearest stop?",   say: "voh ist dee NAYKH-stuh HAHL-tuh-shtel-uh", tip: "For trams and buses." },
-    { de: "Eine Fahrkarte nach Köln, bitte.", en: "A ticket to Köln, please.",  say: "I-nuh FAR-kar-tuh nakh kurln BIT-tuh", tip: "At the Automat or the counter." },
-    { de: "Wann kommt die nächste Bahn?",    en: "When's the next train?",      say: "vahn komt dee NAYKH-stuh bahn", tip: "Bahn = train/tram. Check the DB Navigator app." },
-    { de: "Ist dieser Platz frei?",          en: "Is this seat free?",          say: "ist DEE-zuh plahts fry",       tip: "Polite way to claim a seat on a packed train." },
+  basics: [
+    { de: "Ja.",             en: "Yes.",                       say: "yah",               tip: "The first word everyone learns. Sometimes drawn out: jaaa." },
+    { de: "Nein.",           en: "No.",                        say: "nine",              tip: "Said politely with 'nein, danke' — no, thanks." },
+    { de: "Bitte.",          en: "Please / You're welcome.",   say: "BIT-tuh",           tip: "One word, two meanings. Also: 'here you go' when handing something over." },
+    { de: "Danke.",          en: "Thanks.",                    say: "DAHN-kuh",          tip: "Add 'schön' or 'sehr' to be extra polite: Danke schön." },
+    { de: "Entschuldigung.", en: "Excuse me / Sorry.",         say: "ent-SHOOL-dee-goong", tip: "For bumping into someone OR getting their attention." },
+    { de: "Kein Problem.",   en: "No problem.",                say: "kine pro-BLAYM",    tip: "Reply when someone apologizes. Casual and warm." },
+    { de: "Vielleicht.",     en: "Maybe.",                     say: "fee-LYKHT",         tip: "The German way of dodging a commitment." },
   ],
   smalltalk: [
-    { de: "Ich komme aus Indonesien.",  en: "I'm from Indonesia.",        say: "ikh KOM-uh ows in-doh-NAY-zee-un", tip: "Germans love asking where you're from." },
-    { de: "Ich lerne noch Deutsch.",    en: "I'm still learning German.", say: "ikh LER-nuh nokh doytch", tip: "Disarms locals — they'll switch to slow mode (or English)." },
-    { de: "Sprechen Sie Englisch?",     en: "Do you speak English?",      say: "SHPREKH-un zee ENG-lish", tip: "In Köln, almost always yes. Try the German first anyway." },
-    { de: "Alles klar.",                en: "All good. / Got it.",        say: "AHL-us klar",       tip: "Conversational glue. Use it everywhere." },
-    { de: "Genau.",                     en: "Exactly.",                   say: "guh-NOW",           tip: "The most German word. Sprinkle liberally to sound fluent." },
+    { de: "Wie geht's?",            en: "How's it going?",            say: "vee gates",                  tip: "Casual. Reply: 'Gut, danke' or 'Nicht schlecht' (not bad)." },
+    { de: "Wie heißt du?",           en: "What's your name?",          say: "vee hyst doo",               tip: "Casual 'du' form. Use 'wie heißen Sie?' with strangers." },
+    { de: "Ich heiße Jul.",          en: "My name is Jul.",            say: "ikh HY-suh",                 tip: "Or just: 'Ich bin Jul' — I'm Jul. Both work." },
+    { de: "Woher kommst du?",        en: "Where are you from?",        say: "vo-HAIR komst doo",          tip: "Germans love this question. Have your answer ready." },
+    { de: "Ich komme aus Indonesien.", en: "I'm from Indonesia.",      say: "ikh KOM-uh ows in-doh-NAY-zee-un", tip: "Expect follow-up questions about food and beaches." },
+    { de: "Ich lerne noch Deutsch.", en: "I'm still learning German.", say: "ikh LER-nuh nokh doytch",    tip: "Disarms locals — they'll slow down (or switch to English)." },
+    { de: "Sprechen Sie Englisch?",  en: "Do you speak English?",      say: "SHPREKH-un zee ENG-lish",    tip: "In Köln, almost always yes. Try German first anyway." },
+    { de: "Alles klar.",             en: "All good. / Got it.",        say: "AHL-us klar",                tip: "Conversational glue. Sprinkle everywhere." },
+    { de: "Genau.",                  en: "Exactly.",                   say: "guh-NOW",                    tip: "The most German word. Use it to sound fluent instantly." },
+    { de: "Wirklich?",               en: "Really?",                    say: "VEERK-likh",                 tip: "Show interest. Or skepticism." },
+  ],
+  numbers: [
+    { de: "eins, zwei, drei",     en: "one, two, three",            say: "ines, tsvy, dry",            tip: "The first three. The rest follow patterns once you've got these." },
+    { de: "vier, fünf, sechs",    en: "four, five, six",            say: "feer, fuunf, zex",           tip: "Practice ordering 'sechs Brötchen' — six bread rolls — at the bakery." },
+    { de: "Wie viel kostet das?", en: "How much does that cost?",   say: "vee feel KOS-tut dahss",     tip: "Universal shopping phrase." },
+    { de: "Zwei Euro fünfzig.",   en: "Two euros fifty.",           say: "tsvy OY-roh FUUNF-tsikh",    tip: "Cents come after, no decimal point in speech." },
+    { de: "Ein bisschen.",        en: "A little.",                  say: "ine BISS-khun",              tip: "Use for 'a little German', 'a little sugar', everything." },
+    { de: "Sehr viel.",           en: "A lot.",                     say: "zair feel",                  tip: "Opposite of ein bisschen." },
+  ],
+  ordering: [
+    { de: "Ich hätte gern…",      en: "I'd like…",                  say: "ikh HET-tuh gairn",          tip: "The polite way to order anything. Hätte = would have." },
+    { de: "Ein Kaffee, bitte.",   en: "One coffee, please.",        say: "ine KAH-fay BIT-tuh",        tip: "In Germany, Kaffee usually means a small black coffee." },
+    { de: "Ein Kölsch, bitte.",   en: "One Kölsch, please.",        say: "ine kurlsh BIT-tuh",         tip: "Köln's local beer. Comes in tiny 0.2L glasses to stay fresh." },
+    { de: "Noch eins, bitte!",    en: "Another one, please!",       say: "nokh ines BIT-tuh",          tip: "Köbes (waiters) refill automatically. Coaster on top = stop." },
+    { de: "Die Rechnung, bitte.", en: "The bill, please.",          say: "dee REKH-noong BIT-tuh",     tip: "Tip ~10% — say the rounded total when paying, don't leave coins." },
+    { de: "Zum Mitnehmen.",       en: "To take away.",              say: "tsoom MIT-nay-mun",          tip: "Versus 'zum hier essen' — to eat in." },
+    { de: "Prost!",               en: "Cheers!",                    say: "prohst",                     tip: "Eye contact when clinking. Otherwise: 7 years bad luck (allegedly)." },
+    { de: "Guten Appetit!",       en: "Enjoy your meal!",           say: "GOO-tun ah-puh-TEET",        tip: "Said before eating. Reply: 'Danke, gleichfalls' — same to you." },
+  ],
+  gettingaround: [
+    { de: "Wo ist…?",                  en: "Where is…?",            say: "voh ist",                    tip: "The most useful question word combo. Add anything: Wo ist der Bahnhof? Die Toilette?" },
+    { de: "Wie komme ich nach Köln?",  en: "How do I get to Köln?", say: "vee KOM-uh ikh nakh kurln",  tip: "'Nach' for cities and countries. 'Zu' for specific places." },
+    { de: "Links / rechts / geradeaus.", en: "Left / right / straight.", say: "links / rekhts / guh-RAH-duh-ows", tip: "Survival kit for following directions." },
+    { de: "Ist dieser Platz frei?",     en: "Is this seat free?",   say: "ist DEE-zuh plahts fry",     tip: "Polite way to claim a seat on a packed train." },
+    { de: "Ich verstehe nicht.",        en: "I don't understand.",  say: "ikh fer-SHTAY-uh nikht",     tip: "Better than nodding politely while lost." },
+    { de: "Können Sie das wiederholen?", en: "Can you repeat that?", say: "KUR-nun zee dahss vee-duh-HOH-lun", tip: "Useful when locals speak at warp speed." },
   ],
   schimpfwoerter: [
     { de: "Scheiße!",                       en: "Shit!",                                 say: "SHY-suh",                       tip: "The all-purpose exclamation. Heard hourly on every German street." },
@@ -274,12 +285,12 @@ const GERMAN_PHRASES = {
   ],
 };
 
-// Map task categories → phrase themes, so the dude teaches what's relevant.
+// Map task categories → phrase themes, so the dude leans into relevant
+// vocab when you have lots of open work in that area. Light touch only —
+// most rotations stay general/casual.
 const CATEGORY_TO_THEME = {
-  Banking: 'bureaucracy', Visa: 'bureaucracy', Admin: 'bureaucracy',
-  Housing: 'apartment', Apartment: 'apartment',
-  Travel: 'transit', Transit: 'transit',
-  Food: 'cafe', Café: 'cafe', Cafe: 'cafe',
+  Travel: 'gettingaround', Transit: 'gettingaround',
+  Food: 'ordering', Café: 'ordering', Cafe: 'ordering',
 };
 
 // Picks what the dude should say. Mostly a German phrase, occasionally
@@ -305,7 +316,8 @@ function pickDudeContent(state, progress, byCat, cycle) {
     if (!state.checked[t.id]) openByCat[t.cat] = (openByCat[t.cat] || 0) + 1;
   });
   const topCats = Object.entries(openByCat).sort((a, b) => b[1] - a[1]).map(([c]) => c);
-  const themes = ['greetings', 'cafe', 'smalltalk', 'schimpfwoerter']; // always-eligible
+  // Default rotation skews to beginner/casual stuff.
+  const themes = ['greetings', 'basics', 'smalltalk', 'numbers', 'ordering', 'schimpfwoerter'];
   for (const c of topCats) {
     const theme = CATEGORY_TO_THEME[c];
     if (theme && !themes.includes(theme)) themes.unshift(theme);
@@ -363,11 +375,11 @@ function OverallProgress({ state }) {
 
   const themeLabel = isPhrase ? ({
     greetings: 'Greetings',
-    bureaucracy: 'At the Bürgeramt',
-    apartment: 'Apartment hunt',
-    cafe: 'Café & Kneipe',
-    transit: 'Getting around',
+    basics: 'The basics',
     smalltalk: 'Small talk',
+    numbers: 'Numbers & money',
+    ordering: 'Café & Kneipe',
+    gettingaround: 'Getting around',
     schimpfwoerter: 'Schimpfwörter 🤬',
   })[content.theme] : null;
 
