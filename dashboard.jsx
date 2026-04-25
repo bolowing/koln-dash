@@ -8,7 +8,6 @@ function VariationA({ onReset }) {
   const [openTask, setOpenTask] = React.useState(null);
   const [openLineId, setOpenLineId] = React.useState(null);
   const [showAddLine, setShowAddLine] = React.useState(false);
-  const [addTaskLane, setAddTaskLane] = React.useState(null);
   const [tab, setTab] = React.useState('all');
   const [catFilter, setCatFilter] = React.useState(null);
   const [collapsedGroups, setCollapsedGroups] = React.useState({});
@@ -36,8 +35,6 @@ function VariationA({ onReset }) {
 
   const setCurrentUser = (u) =>
     setState(s => ({ ...s, meta: { ...s.meta, currentUser: u } }));
-
-  const addTask = (lane) => setAddTaskLane(lane);
 
   const openTaskById = (taskId, lane) => {
     const t = state.lanes[lane]?.find(x => x.id === taskId);
@@ -423,7 +420,6 @@ function VariationA({ onReset }) {
             onToggleGroup={toggleGroup}
             state={state} setState={setState}
             onOpen={(t) => setOpenTask({ task: t, lane: 'VJ' })}
-            onAdd={() => addTask('VJ')}
             onToggle={toggleCheck}
             onTogglePin={togglePin}
             categories={cats}
@@ -500,14 +496,6 @@ function VariationA({ onReset }) {
         />
       )}
 
-      {addTaskLane && (
-        <AddTaskDialog
-          lane={addTaskLane}
-          state={state} setState={setState}
-          onClose={() => setAddTaskLane(null)}
-          categories={cats}
-        />
-      )}
         </div>
       </div>
     </div>
@@ -774,13 +762,21 @@ function Lane({ title, lane, visible, filterASAP, catFilter, collapsedGroups, on
         );
       })}
 
-      <QuickAddTask lane={lane} setState={setState} onMore={onAdd}/>
+      <QuickAddTask lane={lane} state={state} setState={setState} categories={categories}/>
     </div>
   );
 }
 
-function QuickAddTask({ lane, setState, onMore }) {
+function QuickAddTask({ lane, state, setState, categories }) {
   const [text, setText] = React.useState('');
+  const [expanded, setExpanded] = React.useState(false);
+  const [cat, setCat] = React.useState('Visa docs');
+  const [urgency, setUrgency] = React.useState('soon');
+  const [due, setDue] = React.useState('Soon');
+
+  const catNames = Object.keys(categories);
+  const urgencyOptions = KD.urgencyOptions;
+
   const submit = () => {
     const trimmed = text.trim();
     if (!trimmed) return;
@@ -792,33 +788,157 @@ function QuickAddTask({ lane, setState, onMore }) {
           ...s.lanes,
           [lane]: [...s.lanes[lane], {
             id: taskId, text: trimmed,
-            cat: 'Visa docs', due: 'TBD', urgency: 'soon',
+            cat, due: due.trim() || 'TBD', urgency,
           }],
         },
       };
       return KD.logActivity(next, next.meta.currentUser || 'VJ', 'added task', trimmed);
     });
     setText('');
+    // Keep cat/urgency/due sticky for batch entry; only clear text.
   };
+
+  const reset = () => {
+    setText(''); setCat('Visa docs'); setUrgency('soon'); setDue('Soon');
+    setExpanded(false);
+  };
+
+  const activeCat = categories[cat] || { color: P.dim, bg: P.lineSoft };
+
   return (
-    <div className="va-sans" style={{
-      marginTop: 10, display: 'flex', gap: 6, alignItems: 'stretch',
-    }}>
-      <input
-        value={text} onChange={e => setText(e.target.value)}
-        onKeyDown={e => { if (e.key === 'Enter') submit(); }}
-        placeholder={`+ Quick add to ${lane}'s lane…`}
-        style={{
-          flex: 1, border: `1px dashed ${P.lineDashed}`, background: 'transparent',
-          color: P.ink, fontFamily: 'inherit', fontSize: 13,
-          padding: '8px 12px', borderRadius: 10, outline: 'none',
-        }}
-      />
-      <button onClick={onMore} title="More options" style={{
-        border: `1px dashed ${P.lineDashed}`, background: 'transparent',
-        color: P.dim, padding: '0 12px', borderRadius: 10, cursor: 'pointer',
-        fontSize: 14, fontFamily: 'inherit', fontWeight: 500,
-      }}>⋯</button>
+    <div className="va-sans" style={{ marginTop: 10 }}>
+      <div style={{ display: 'flex', gap: 6, alignItems: 'stretch' }}>
+        <input
+          value={text} onChange={e => setText(e.target.value)}
+          onKeyDown={e => {
+            if (e.key === 'Enter') submit();
+            if (e.key === 'Escape') reset();
+          }}
+          placeholder={`+ Quick add to ${lane}'s lane…`}
+          style={{
+            flex: 1, minWidth: 0,
+            border: `1px dashed ${P.lineDashed}`, background: 'transparent',
+            color: P.ink, fontFamily: 'inherit', fontSize: 13,
+            padding: '8px 12px', borderRadius: 10, outline: 'none',
+          }}
+        />
+        <button
+          onClick={() => setExpanded(v => !v)}
+          title={expanded ? 'Collapse options' : 'Expand options'}
+          aria-label="Toggle options"
+          style={{
+            border: `1px dashed ${P.lineDashed}`,
+            background: expanded ? P.accentSoft : 'transparent',
+            color: expanded ? P.accent : P.dim,
+            padding: '0 12px', borderRadius: 10, cursor: 'pointer',
+            fontSize: 12, fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+            fontWeight: 700, letterSpacing: 0.5,
+            transition: 'background 0.15s ease, color 0.15s ease',
+          }}
+        >{expanded ? '▴' : '▾'}</button>
+      </div>
+
+      {expanded && (
+        <div style={{
+          marginTop: 8, padding: '12px 14px',
+          border: `1px dashed ${P.lineDashed}`, borderRadius: 10,
+          background: P.drawer,
+          display: 'flex', flexDirection: 'column', gap: 10,
+        }}>
+          {/* Category chips */}
+          <div>
+            <div className="va-mono" style={{
+              fontSize: 9, letterSpacing: 1.5, textTransform: 'uppercase',
+              color: P.dim, fontWeight: 700, marginBottom: 6,
+            }}>Category</div>
+            <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+              {catNames.map(c => {
+                const cd = categories[c];
+                const active = cat === c;
+                return (
+                  <button key={c} onClick={() => setCat(c)} style={{
+                    border: '1px solid ' + (active ? cd.color : P.lineMid),
+                    background: active ? cd.bg : 'transparent',
+                    color: active ? cd.color : P.dimStrong,
+                    padding: '3px 9px', borderRadius: 999,
+                    fontSize: 11, fontWeight: 600, fontFamily: 'inherit',
+                    cursor: 'pointer',
+                    display: 'inline-flex', alignItems: 'center', gap: 4,
+                    transition: 'background 0.15s ease, color 0.15s ease, border-color 0.15s ease',
+                  }}>{cd.emoji && <span aria-hidden="true">{cd.emoji}</span>}{c}</button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Urgency + due in a row */}
+          <div style={{
+            display: 'grid', gridTemplateColumns: '1fr 130px', gap: 10,
+            alignItems: 'end',
+          }}>
+            <div>
+              <div className="va-mono" style={{
+                fontSize: 9, letterSpacing: 1.5, textTransform: 'uppercase',
+                color: P.dim, fontWeight: 700, marginBottom: 6,
+              }}>Urgency</div>
+              <div style={{ display: 'flex', gap: 4 }}>
+                {urgencyOptions.map(u => {
+                  const active = urgency === u.key;
+                  return (
+                    <button key={u.key} onClick={() => setUrgency(u.key)} style={{
+                      border: '1px solid ' + (active ? u.color : P.lineMid),
+                      background: active ? u.color : 'transparent',
+                      color: active ? P.card : u.color,
+                      padding: '3px 10px', borderRadius: 999,
+                      fontSize: 11, fontWeight: 600, fontFamily: 'inherit',
+                      cursor: 'pointer',
+                      transition: 'background 0.15s ease, color 0.15s ease',
+                    }}>{u.label}</button>
+                  );
+                })}
+              </div>
+            </div>
+            <div>
+              <div className="va-mono" style={{
+                fontSize: 9, letterSpacing: 1.5, textTransform: 'uppercase',
+                color: P.dim, fontWeight: 700, marginBottom: 6,
+              }}>Due</div>
+              <input
+                value={due} onChange={e => setDue(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') submit(); }}
+                placeholder="e.g. May 1, ASAP, TBD"
+                style={{
+                  width: '100%', minWidth: 0,
+                  border: `1px solid ${P.lineMid}`, background: P.card,
+                  color: P.ink, fontFamily: 'inherit', fontSize: 12,
+                  padding: '5px 9px', borderRadius: 6, outline: 'none',
+                }}
+              />
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 6 }}>
+            <button onClick={reset} style={{
+              border: `1px solid ${P.lineMid}`, background: 'transparent',
+              color: P.dim, padding: '5px 12px', borderRadius: 6, fontSize: 11,
+              fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit',
+            }}>Reset</button>
+            <button onClick={submit} disabled={!text.trim()} style={{
+              border: 'none',
+              background: text.trim() ? P.accent : P.lineMid,
+              color: P.card, padding: '5px 14px', borderRadius: 6,
+              fontSize: 11, fontWeight: 600, fontFamily: 'inherit',
+              cursor: text.trim() ? 'pointer' : 'not-allowed',
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+            }}>
+              <span aria-hidden="true" style={{
+                fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+              }}>↵</span>
+              Add to {lane}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -1387,202 +1507,6 @@ function FxCalculator({ state, setState }) {
           }}
           title="Spot-check on Google Finance"
         >📈 Google</a>
-      </div>
-    </div>
-  );
-}
-
-function AddTaskDialog({ lane, state, setState, onClose, categories }) {
-  const [text, setText] = React.useState('');
-  const [cat, setCat] = React.useState('Visa docs');
-  const [due, setDue] = React.useState('Soon');
-  const [urgency, setUrgency] = React.useState('soon');
-  const [alsoLine, setAlsoLine] = React.useState(false);
-  const [amount, setAmount] = React.useState(0);
-  const [lineStatus, setLineStatus] = React.useState('pending');
-
-  const catNames = Object.keys(categories);
-  const urgencyOptions = KD.urgencyOptions;
-  const statusOptions = KD.statusOptions;
-
-  const create = () => {
-    if (!text.trim()) return;
-    const taskId = 'x' + Date.now();
-    setState(s => {
-      let next = {
-        ...s,
-        lanes: {
-          ...s.lanes,
-          [lane]: [...s.lanes[lane], {
-            id: taskId, text: text.trim(),
-            cat, due: due.trim() || 'TBD', urgency,
-          }],
-        },
-      };
-      if (alsoLine) {
-        const lineId = 'm-' + Date.now();
-        next = {
-          ...next,
-          money: {
-            ...next.money,
-            lines: [...next.money.lines, {
-              id: lineId, label: text.trim(),
-              amountEUR: Number(amount) || 0,
-              status: lineStatus, note: '',
-              taskIds: [taskId],
-            }],
-          },
-        };
-      }
-      return KD.logActivity(next, next.meta.currentUser || 'VJ', 'added task', text.trim());
-    });
-    onClose();
-  };
-
-  return (
-    <div style={{
-      position: 'fixed', inset: 0, zIndex: 60,
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      background: P.overlayStrong, backdropFilter: 'blur(3px)',
-    }} onClick={onClose}>
-      <div className="v1-dialog" onClick={e => e.stopPropagation()} style={{
-        width: 480, maxWidth: '94%', background: P.drawer,
-        borderRadius: 16, padding: '22px 24px',
-        display: 'flex', flexDirection: 'column', gap: 14,
-        boxShadow: '0 20px 60px rgba(0,0,0,0.25)',
-        fontFamily: 'Inter, sans-serif',
-      }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-          <div>
-            <div style={{ fontSize: 10, letterSpacing: 0.8, color: P.dim, textTransform: 'uppercase' }}>
-              {lane}'s lane
-            </div>
-            <div style={{
-              fontSize: 22, fontWeight: 500, marginTop: 2,
-              fontFamily: "'Bricolage Grotesque', system-ui, sans-serif",
-            }}>Add task</div>
-          </div>
-          <button onClick={onClose} style={{
-            border: 'none', background: 'transparent', fontSize: 20,
-            cursor: 'pointer', color: P.dim, padding: 0, lineHeight: 1,
-          }}>×</button>
-        </div>
-
-        <div>
-          <FieldLabel>Task</FieldLabel>
-          <input autoFocus value={text} onChange={e => setText(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter') create(); }}
-            placeholder="e.g. Book Germany trip with Hafiz"
-            style={fieldStyle()}/>
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-          <div>
-            <FieldLabel>Due</FieldLabel>
-            <input value={due} onChange={e => setDue(e.target.value)}
-              style={fieldStyle()}/>
-          </div>
-          <div>
-            <FieldLabel>Urgency</FieldLabel>
-            <div style={{ display: 'flex', gap: 5 }}>
-              {urgencyOptions.map(u => {
-                const active = urgency === u.key;
-                return (
-                  <button key={u.key} onClick={() => setUrgency(u.key)} style={{
-                    border: '1px solid ' + (active ? u.color : P.lineStrong),
-                    background: active ? u.color : P.card,
-                    color: active ? P.card : u.color,
-                    padding: '6px 10px', borderRadius: 999,
-                    fontSize: 11, fontWeight: 600, cursor: 'pointer',
-                    fontFamily: 'inherit', flex: 1,
-                  }}>{u.label}</button>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-
-        <div>
-          <FieldLabel>Category</FieldLabel>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
-            {catNames.map(c => {
-              const col = categories[c]; const active = cat === c;
-              return (
-                <button key={c} onClick={() => setCat(c)} style={{
-                  border: '1px solid ' + (active ? col.color : 'transparent'),
-                  background: active ? col.color : col.bg,
-                  color: active ? P.card : col.color,
-                  padding: '4px 11px', borderRadius: 4,
-                  fontSize: 11, fontWeight: 600, cursor: 'pointer',
-                  fontFamily: 'inherit',
-                }}>{c}</button>
-              );
-            })}
-          </div>
-        </div>
-
-        <label style={{
-          display: 'flex', alignItems: 'center', gap: 10,
-          padding: '10px 12px', borderRadius: 10,
-          background: alsoLine ? P.accentSoft : P.card,
-          border: '1px solid ' + (alsoLine ? '#e0cfa8' : P.line),
-          cursor: 'pointer', fontSize: 13,
-        }}>
-          <input type="checkbox" checked={alsoLine}
-            onChange={e => setAlsoLine(e.target.checked)}
-            style={{ width: 16, height: 16, accentColor: P.accent }}/>
-          <span style={{ color: P.ink, fontWeight: 500 }}>
-            Also create a linked budget line
-          </span>
-        </label>
-
-        {alsoLine && (
-          <div style={{
-            padding: 12, background: P.card, borderRadius: 10,
-            border: `1px solid ${P.line}`,
-            display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10,
-          }}>
-            <div>
-              <FieldLabel>Amount (EUR)</FieldLabel>
-              <input type="number" value={amount}
-                onChange={e => setAmount(e.target.value)}
-                style={fieldStyle()}/>
-            </div>
-            <div>
-              <FieldLabel>Status</FieldLabel>
-              <div style={{ display: 'flex', gap: 5 }}>
-                {statusOptions.map(s => {
-                  const active = lineStatus === s.key;
-                  return (
-                    <button key={s.key} onClick={() => setLineStatus(s.key)} style={{
-                      border: '1px solid ' + (active ? s.color : P.lineStrong),
-                      background: active ? s.color : P.card,
-                      color: active ? P.card : s.color,
-                      padding: '6px 8px', borderRadius: 999,
-                      fontSize: 11, fontWeight: 600, cursor: 'pointer',
-                      fontFamily: 'inherit', flex: 1,
-                    }}>{s.label}</button>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-        )}
-
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 4 }}>
-          <button onClick={onClose} style={{
-            border: 'none', background: 'transparent', color: P.dim,
-            padding: '8px 14px', borderRadius: 8, fontSize: 12,
-            cursor: 'pointer', fontFamily: 'inherit', fontWeight: 500,
-          }}>Cancel</button>
-          <button onClick={create} disabled={!text.trim()} style={{
-            background: text.trim() ? P.ink : 'rgba(24,20,15,0.3)',
-            color: P.card, border: 'none',
-            padding: '8px 16px', borderRadius: 8, fontSize: 12,
-            fontWeight: 600, cursor: text.trim() ? 'pointer' : 'not-allowed',
-            fontFamily: 'inherit',
-          }}>Create</button>
-        </div>
       </div>
     </div>
   );
