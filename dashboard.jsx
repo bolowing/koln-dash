@@ -96,6 +96,7 @@ function VariationA({ onReset }) {
               { id: 'progress', label: 'Progress' },
               { id: 'money',    label: 'Money movement' },
               { id: 'blocked',  label: 'Blocked account' },
+              { id: 'map',      label: 'Köln map' },
               { id: 'tasks',    label: 'Tasks' },
               { id: 'ahead',    label: "What's ahead" },
             ]}
@@ -342,6 +343,16 @@ function VariationA({ onReset }) {
         }}>
           <BlockedAccount state={state} setState={setState}/>
         </div>
+      </Section>
+
+      {/* Köln map — embedded Google Maps with editable pins */}
+      <Section
+        id="map"
+        title="Köln map"
+        subtitle="School, neighborhoods, future addresses"
+        state={state} setState={setState}
+      >
+        <KolnMap state={state} setState={setState}/>
       </Section>
 
       {/* Tasks */}

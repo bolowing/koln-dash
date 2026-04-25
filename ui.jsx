@@ -703,6 +703,158 @@ function MiniMonth({ year, month, milestones, today, departureKey, onPick }) {
   );
 }
 
+// Embedded Köln map — uses Google Maps' no-key share-iframe URL.
+// User can switch between saved place pins (school / Dom / etc.) or
+// edit the active pin's query inline to recenter.
+function KolnMap({ state, setState }) {
+  const map = state.map || { activeIdx: 0, places: [] };
+  const places = Array.isArray(map.places) ? map.places : [];
+  const activeIdx = Math.min(Math.max(0, map.activeIdx || 0), Math.max(0, places.length - 1));
+  const active = places[activeIdx];
+
+  const updateMap = (patch) => setState(s => ({ ...s, map: { ...s.map, ...patch } }));
+
+  const setActiveIdx = (i) => updateMap({ activeIdx: i });
+  const updateActiveQuery = (q) => updateMap({
+    places: places.map((p, i) => i === activeIdx ? { ...p, query: q } : p),
+  });
+  const updateActiveLabel = (l) => updateMap({
+    places: places.map((p, i) => i === activeIdx ? { ...p, label: l } : p),
+  });
+  const addPlace = () => updateMap({
+    places: [...places, { id: 'p-' + Date.now(), label: 'New pin', query: 'Köln, Germany' }],
+    activeIdx: places.length,
+  });
+  const removeActive = () => {
+    if (places.length <= 1) return;
+    updateMap({
+      places: places.filter((_, i) => i !== activeIdx),
+      activeIdx: Math.max(0, activeIdx - 1),
+    });
+  };
+
+  const query = active ? active.query : 'Köln, Germany';
+  const src = `https://www.google.com/maps?q=${encodeURIComponent(query)}&z=14&output=embed`;
+  const openLink = `https://www.google.com/maps?q=${encodeURIComponent(query)}`;
+
+  return (
+    <div style={{
+      background: P.card, borderRadius: 18, padding: '20px 22px',
+      display: 'flex', flexDirection: 'column', gap: 12,
+    }}>
+      {/* Pin tabs + add */}
+      <div style={{
+        display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap',
+      }}>
+        {places.map((p, i) => {
+          const isActive = i === activeIdx;
+          return (
+            <button
+              key={p.id}
+              onClick={() => setActiveIdx(i)}
+              style={{
+                cursor: 'pointer',
+                background: isActive ? P.accent : 'transparent',
+                color: isActive ? P.card : P.dimStrong,
+                border: `1px solid ${isActive ? P.accent : P.lineMid}`,
+                padding: '4px 12px', borderRadius: 999,
+                fontSize: 11, fontWeight: 600, fontFamily: 'inherit',
+                transition: 'background 0.15s ease, color 0.15s ease',
+              }}
+            >📍 {p.label}</button>
+          );
+        })}
+        <button
+          onClick={addPlace}
+          title="Add a new pin"
+          style={{
+            cursor: 'pointer',
+            background: 'transparent',
+            color: P.dim,
+            border: `1px dashed ${P.lineDashed}`,
+            padding: '4px 10px', borderRadius: 999,
+            fontSize: 11, fontWeight: 500, fontFamily: 'inherit',
+          }}
+        >+ Pin</button>
+      </div>
+
+      {/* Active pin: editable label + query */}
+      {active && (
+        <div className="va-sans" style={{
+          display: 'grid', gridTemplateColumns: '160px 1fr auto', gap: 8,
+          alignItems: 'center',
+        }}>
+          <input
+            value={active.label}
+            onChange={e => updateActiveLabel(e.target.value)}
+            placeholder="Label"
+            style={{
+              border: `1px solid ${P.lineMid}`, background: P.card,
+              color: P.ink, fontFamily: 'inherit', fontSize: 12,
+              padding: '5px 9px', borderRadius: 6, outline: 'none',
+              fontWeight: 600,
+            }}
+          />
+          <input
+            value={active.query}
+            onChange={e => updateActiveQuery(e.target.value)}
+            placeholder="Address or place name"
+            style={{
+              border: `1px solid ${P.lineMid}`, background: P.card,
+              color: P.ink, fontFamily: 'inherit', fontSize: 12,
+              padding: '5px 9px', borderRadius: 6, outline: 'none',
+              minWidth: 0,
+            }}
+          />
+          <div style={{ display: 'flex', gap: 4 }}>
+            <a
+              href={openLink} target="_blank" rel="noopener noreferrer"
+              title="Open in Google Maps"
+              style={{
+                color: P.accent, textDecoration: 'none',
+                border: `1px solid ${P.lineMid}`, borderRadius: 6,
+                padding: '5px 10px', fontSize: 11, fontWeight: 600,
+                display: 'inline-flex', alignItems: 'center',
+              }}
+            >↗</a>
+            {places.length > 1 && (
+              <button
+                onClick={removeActive}
+                title="Delete this pin"
+                style={{
+                  cursor: 'pointer',
+                  background: 'transparent', color: P.dim,
+                  border: `1px solid ${P.lineMid}`, borderRadius: 6,
+                  padding: '5px 10px', fontSize: 12, fontWeight: 700,
+                  fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+                }}
+              >×</button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* The map itself */}
+      <div style={{
+        position: 'relative',
+        borderRadius: 12, overflow: 'hidden',
+        border: `1px solid ${P.lineMid}`,
+        background: P.lineSoft,
+      }}>
+        <iframe
+          key={src}
+          title={`Köln map — ${active ? active.label : 'Köln'}`}
+          src={src}
+          width="100%" height="360"
+          loading="lazy"
+          referrerPolicy="no-referrer-when-downgrade"
+          style={{ border: 0, display: 'block' }}
+        />
+      </div>
+    </div>
+  );
+}
+
 function MilestoneCalendar({ items, categories, departure, onPick }) {
   const today = new Date();
   // Departure date drives the right edge of the calendar.
