@@ -1541,12 +1541,38 @@ function TaskDetailDrawer({ task, lane, state, setState, onClose, onOpenLine }) 
 
         <div style={{
           paddingTop: 12, borderTop: `1px solid ${P.line}`,
-          display: 'flex', justifyContent: 'flex-end',
+          display: 'flex', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap',
         }}>
+          {!checked && (() => {
+            const pinned = (state.pinned || []).includes(task.id);
+            const pinCount = (state.pinned || []).length;
+            const disabled = !pinned && pinCount >= 3;
+            return (
+              <button
+                onClick={() => setState(s => KD.togglePin(s, task.id))}
+                disabled={disabled}
+                title={pinned ? 'Unpin' : disabled ? '3 tasks already pinned — unpin one first' : 'Pin as in progress'}
+                style={{
+                  border: `1px solid ${pinned ? P.accent : P.lineMid}`,
+                  background: pinned ? P.accent : 'transparent',
+                  color: pinned ? P.card : P.dimStrong,
+                  padding: '6px 12px', borderRadius: 8,
+                  fontSize: 12, fontWeight: 600,
+                  cursor: disabled ? 'not-allowed' : 'pointer',
+                  opacity: disabled ? 0.5 : 1,
+                  fontFamily: 'inherit',
+                  display: 'inline-flex', alignItems: 'center', gap: 6,
+                }}>
+                <span style={{ fontFamily: "'JetBrains Mono', ui-monospace, monospace" }}>▶</span>
+                {pinned ? 'In progress' : 'Mark in progress'}
+              </button>
+            );
+          })()}
           <button onClick={deleteTask} style={{
             border: '1px solid rgba(154,47,63,0.3)', background: 'transparent',
             color: P.danger, padding: '6px 12px', borderRadius: 8,
             fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
+            marginLeft: 'auto',
           }}>Delete task</button>
         </div>
       </div>

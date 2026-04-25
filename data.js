@@ -90,6 +90,9 @@
       theme: 'light',  // 'light' | 'dark'
     },
 
+    // Up to 3 task ids currently "in progress". Auto-unpinned when checked off.
+    pinned: [],
+
     // Fintiba blocked account — the €12,063 deposit that releases €992/mo
     // for living expenses once VJ activates the account in Germany.
     blocked: {
@@ -207,6 +210,7 @@
             blocked: { ...DEFAULTS.blocked, ...(parsed.blocked||{}), steps: mergedSteps },
             ui: { ...DEFAULTS.ui, ...(parsed.ui||{}),
               collapsed: { ...(parsed.ui && parsed.ui.collapsed || {}) } },
+            pinned: Array.isArray(parsed.pinned) ? parsed.pinned.slice(0, 3) : [],
             categories: mergedCats,
             checked: parsed.checked || {},
             notes: parsed.notes || {},
@@ -311,6 +315,37 @@
     return parts.length ? parts : text;
   }
 
+  // Finds a task by id across both lanes; returns { task, lane } or null.
+  function findTask(state, id) {
+    for (const lane of ['VJ', 'Jul']) {
+      const task = (state.lanes[lane] || []).find(t => t.id === id);
+      if (task) return { task, lane };
+    }
+    return null;
+  }
+
+  // Toggles a task in/out of the pinned list. Caps at 3 — adding a 4th
+  // pushes out the oldest. No-op if the task is already checked off.
+  function togglePin(state, id) {
+    const pinned = Array.isArray(state.pinned) ? state.pinned.slice() : [];
+    const idx = pinned.indexOf(id);
+    if (idx >= 0) {
+      pinned.splice(idx, 1);
+    } else {
+      if (state.checked && state.checked[id]) return state;
+      pinned.push(id);
+      while (pinned.length > 3) pinned.shift();
+    }
+    return { ...state, pinned };
+  }
+
+  // Strips an id from the pinned list (used when a task is checked off).
+  function unpin(state, id) {
+    const pinned = Array.isArray(state.pinned) ? state.pinned : [];
+    if (!pinned.includes(id)) return state;
+    return { ...state, pinned: pinned.filter(x => x !== id) };
+  }
+
   // Appends an activity entry; keeps the last 20. Call from setState callbacks.
   function logActivity(s, author, verb, target) {
     const entry = {
@@ -352,6 +387,7 @@
     daysUntil, formatEUR, formatUSD, computeProgress,
     progressByCategory, laneProgress, moneyTotals,
     linkedTasks, linkedLines,
+    findTask, togglePin, unpin,
     refreshExchangeRates, linkify, logActivity,
     statusOptions: STATUS_OPTIONS,
     urgencyOptions: URGENCY_OPTIONS,
