@@ -184,6 +184,38 @@
 
     /* EditableNumber input shouldn't force 140px on tight cells */
     .v1-editable-input { width: 100% !important; max-width: 140px; }
+
+    /* Pinned chips in the Recent strip — tighter text + smaller max */
+    .v1-pin-chip { max-width: 100% !important; }
+    .v1-pin-chip-text { max-width: 150px !important; }
+    .v1-activity { padding: 10px 12px !important; gap: 10px !important; }
+
+    /* Blocked-account monthly release strip: 12 cols → 6 wraps */
+    .v1-blocked-months {
+      grid-template-columns: repeat(6, minmax(0, 1fr)) !important;
+      gap: 5px !important;
+    }
+    /* Blocked-account flow steps: stack to single column for clarity */
+    .v1-blocked-flow {
+      grid-template-columns: 1fr !important;
+      gap: 8px !important;
+    }
+    /* Key facts: stay single column on phones */
+    .v1-blocked-facts {
+      grid-template-columns: 1fr !important;
+      gap: 18px !important;
+    }
+    /* Section header chevron + title: keep on one line, allow subtitle wrap */
+    .v1-section-h2 { font-size: 22px !important; }
+
+    /* Theme toggle stays compact in stacked masthead */
+    .v1-toc { display: none !important; }
+
+    /* Milestone add form stacks vertically on phones */
+    .v1-milestone-form {
+      grid-template-columns: 1fr !important;
+      gap: 8px !important;
+    }
   }
 </style>
 <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" crossorigin="anonymous"></script>

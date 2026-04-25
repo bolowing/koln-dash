@@ -687,7 +687,7 @@ function MilestoneTimeline({ state, setState, categories }) {
       </div>
 
       {adding ? (
-        <div className="va-sans" style={{
+        <div className="va-sans v1-milestone-form" style={{
           marginTop: 14, padding: 12, borderRadius: 10,
           border: `1px dashed ${P.lineDashed}`, background: P.drawer,
           display: 'grid', gridTemplateColumns: '90px 1fr 130px auto', gap: 8,
@@ -1187,7 +1187,7 @@ function BlockedAccount({ state, setState }) {
       </div>
 
       {/* Flow diagram */}
-      <div style={{
+      <div className="v1-blocked-flow" style={{
         display: 'grid',
         gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
         gap: 10, marginBottom: 22,
@@ -1234,7 +1234,7 @@ function BlockedAccount({ state, setState }) {
             <span style={{ color: P.dim }}>€{remainingEUR.toLocaleString('de-DE')} to come</span>
           </div>
         </div>
-        <div style={{
+        <div className="v1-blocked-months" style={{
           display: 'grid',
           gridTemplateColumns: `repeat(${months}, minmax(0, 1fr))`,
           gap: 4,
@@ -1269,7 +1269,7 @@ function BlockedAccount({ state, setState }) {
       </div>
 
       {/* Two-column: facts + checklist */}
-      <div style={{
+      <div className="v1-blocked-facts" style={{
         display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 22,
       }}>
         <div>
