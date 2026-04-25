@@ -47,7 +47,7 @@ function EditableNumber({ value, onChange, prefix='', suffix='', style }) {
         onBlur={() => { const n = parseFloat(draft); if (!isNaN(n)) onChange(n); setEditing(false); }}
         onKeyDown={e => { if (e.key === 'Enter') e.target.blur(); if (e.key === 'Escape') { setDraft(String(value)); setEditing(false); } }}
         style={{
-          font: 'inherit', color: 'inherit', border: '1.5px solid #9b4722',
+          font: 'inherit', color: 'inherit', border: `1.5px solid ${P.accent}`,
           borderRadius: 6, padding: '2px 6px', width: 140,
           background: P.card, outline: 'none',
           ...style,
@@ -65,8 +65,7 @@ function EditableNumber({ value, onChange, prefix='', suffix='', style }) {
         transition: 'background .15s',
         ...style,
       }}
-      onMouseEnter={e => e.currentTarget.style.background = 'rgba(155,71,34,0.08)'}
-      onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+      className="v1-editable-hover"
       title="Click to edit"
     >{prefix}{Number(value).toLocaleString('de-DE')}{suffix}</span>
   );
@@ -92,7 +91,7 @@ function EditableText({ value, onChange, placeholder='', multiline=false, style 
         }}
         placeholder={placeholder}
         style={{
-          font: 'inherit', color: 'inherit', border: '1.5px solid #9b4722',
+          font: 'inherit', color: 'inherit', border: `1.5px solid ${P.accent}`,
           borderRadius: 6, padding: multiline ? '8px 10px' : '2px 6px',
           background: P.card, outline: 'none',
           width: '100%', resize: multiline ? 'vertical' : 'none',
@@ -113,8 +112,7 @@ function EditableText({ value, onChange, placeholder='', multiline=false, style 
         color: value ? 'inherit' : P.dimSoft,
         ...style,
       }}
-      onMouseEnter={e => e.currentTarget.style.background = 'rgba(155,71,34,0.08)'}
-      onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+      className="v1-editable-hover"
       title="Click to edit"
     >{value ? (multiline ? KD.linkify(value) : value) : placeholder}</span>
   );
@@ -1162,7 +1160,7 @@ function BlockedAccount({ state, setState }) {
       <div style={{ height: 8, borderRadius: 999, background: P.lineSoft, overflow: 'hidden', marginBottom: 18 }}>
         <div style={{
           width: `${fundedPct}%`, height: '100%',
-          background: 'linear-gradient(90deg, #c8985f 0%, #9b4722 100%)',
+          background: `linear-gradient(90deg, ${P.dimSoft} 0%, ${P.accent} 100%)`,
           transition: 'width 0.7s cubic-bezier(.4,.6,.3,1)',
           borderRadius: 999,
         }}/>
@@ -1356,7 +1354,7 @@ function FundingProgress({ sentEUR, totalEUR }) {
       }}>
         <div style={{
           width: `${pct}%`, height: '100%',
-          background: 'linear-gradient(90deg, #c8985f 0%, #9b4722 100%)',
+          background: `linear-gradient(90deg, ${P.dimSoft} 0%, ${P.accent} 100%)`,
           transition: 'width 0.7s cubic-bezier(.4,.6,.3,1)',
           borderRadius: 999,
         }}/>
@@ -1654,7 +1652,7 @@ function TaskDetailDrawer({ task, lane, state, setState, onClose, onOpenLine }) 
             )}
             {(noteObj.comments || []).map(c => (
               <div key={c.id} style={{
-                background: c.author === 'VJ' ? '#e7f2ec' : P.accentSoft,
+                background: c.author === 'VJ' ? 'var(--kd-vj-bubble)' : P.accentSoft,
                 borderRadius: 10, padding: '8px 12px',
                 alignSelf: c.author === 'VJ' ? 'flex-start' : 'flex-end',
                 maxWidth: '85%',

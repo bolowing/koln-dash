@@ -36,6 +36,9 @@
     --kd-overlay-strong: rgba(26,18,10,0.42);
     --kd-body-bg:      #e9ddc6;
     --kd-scanlines:    transparent;
+    --kd-vj-bubble:    #e7f2ec;
+    --kd-hover-tint:   rgba(193,74,28,0.08);
+    --kd-focus-ring:   rgba(193,74,28,0.55);
   }
   [data-theme="dark"] {
     --kd-paper:        #13100b;
@@ -58,6 +61,9 @@
     --kd-overlay:      rgba(0,0,0,0.55);
     --kd-overlay-strong: rgba(0,0,0,0.72);
     --kd-body-bg:      #0d0a08;
+    --kd-vj-bubble:    rgba(111,174,102,0.18);
+    --kd-hover-tint:   rgba(224,113,64,0.14);
+    --kd-focus-ring:   rgba(224,113,64,0.7);
     --kd-scanlines: repeating-linear-gradient(
       to bottom,
       rgba(232,220,196,0.025) 0px,
@@ -84,6 +90,22 @@
   * { box-sizing: border-box; }
   #root { min-height: 100vh; }
   .v1-wrap { max-width: 1420px; margin: 0 auto; }
+
+  /* Keyboard focus rings — visible in both themes, hidden for mouse use. */
+  :focus { outline: none; }
+  :focus-visible {
+    outline: 2px solid var(--kd-focus-ring);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  /* Editable text/number hover affordance — replaces the 4 inline JS
+     mouseEnter/Leave handlers that used to set rgba(155,71,34,0.08). */
+  .v1-editable-hover {
+    transition: background 0.15s ease;
+  }
+  .v1-editable-hover:hover { background: var(--kd-hover-tint); }
+
 
   @media (max-width: 720px) {
     /* Prevent iOS auto-zoom on focus by enforcing 16px min on inputs.
