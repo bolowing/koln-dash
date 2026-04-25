@@ -573,6 +573,59 @@ function OverallProgress({ state }) {
   );
 }
 
+// ASCII-vibes light/dark toggle. Lives in the masthead. Reads/writes
+// state.ui.theme and pushes the active theme onto <html data-theme>.
+function ThemeToggle({ state, setState }) {
+  const theme = (state.ui && state.ui.theme) || 'light';
+  React.useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+  }, [theme]);
+  const setTheme = (t) => setState(s => ({
+    ...s, ui: { ...s.ui, theme: t },
+  }));
+  const segStyle = (active) => ({
+    cursor: 'pointer',
+    background: active ? P.accent : 'transparent',
+    color: active ? P.card : P.dim,
+    border: 'none',
+    padding: '4px 9px',
+    font: 'inherit',
+    fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+    fontSize: 10,
+    letterSpacing: 1.4,
+    textTransform: 'uppercase',
+    fontWeight: 700,
+    transition: 'background 0.18s ease, color 0.18s ease',
+  });
+  return (
+    <div className="va-mono" style={{
+      display: 'inline-flex', alignItems: 'center',
+      border: `1px solid ${P.lineMid}`,
+      borderRadius: 4, overflow: 'hidden',
+      background: P.card,
+      boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
+    }}>
+      <span aria-hidden="true" style={{
+        padding: '4px 6px 4px 8px', color: P.dimSoft,
+        fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+        fontSize: 10, letterSpacing: 1,
+      }}>[</span>
+      <button onClick={() => setTheme('light')} style={segStyle(theme === 'light')} title="Light theme">
+        {theme === 'light' ? '☀ SUN' : 'SUN'}
+      </button>
+      <span aria-hidden="true" style={{ color: P.dimSoft, padding: '4px 1px', fontSize: 10 }}>·</span>
+      <button onClick={() => setTheme('dark')} style={segStyle(theme === 'dark')} title="Dark theme">
+        {theme === 'dark' ? '☾ MOON' : 'MOON'}
+      </button>
+      <span aria-hidden="true" style={{
+        padding: '4px 8px 4px 6px', color: P.dimSoft,
+        fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+        fontSize: 10, letterSpacing: 1,
+      }}>]</span>
+    </div>
+  );
+}
+
 // Reusable collapsible section. Stores collapse state by id under
 // state.ui.collapsed so it persists across reloads.
 function Section({ id, title, subtitle, headingSize = 22, headerRight, state, setState, children }) {
@@ -595,12 +648,12 @@ function Section({ id, title, subtitle, headingSize = 22, headerRight, state, se
             display: 'flex', alignItems: 'baseline', flexWrap: 'wrap',
             gap: 14, cursor: 'pointer', userSelect: 'none', flex: '1 1 auto',
           }}>
-          <span aria-hidden="true" style={{
-            display: 'inline-block', width: 14, lineHeight: 1,
-            color: P.dim, fontSize: 12,
-            transform: collapsed ? 'rotate(-90deg)' : 'rotate(0deg)',
-            transition: 'transform 0.18s ease',
-          }}>▾</span>
+          <span aria-hidden="true" className="va-mono" style={{
+            display: 'inline-block', minWidth: 22, lineHeight: 1,
+            color: P.dim, fontSize: 11, letterSpacing: 0.5,
+            fontWeight: 700,
+            transition: 'color 0.18s ease',
+          }}>{collapsed ? '[+]' : '[-]'}</span>
           <h2 className="v1-section-h2" style={{
             fontSize: headingSize, fontWeight: 400, margin: 0,
             letterSpacing: headingSize >= 28 ? -0.5 : -0.3,
@@ -681,13 +734,13 @@ function TableOfContents({ state, setState, items }) {
           padding: 18px 14px 14px 18px;
           border-radius: 14px;
           background:
-            radial-gradient(140% 90% at 0% 0%, rgba(193,74,28,0.04) 0%, transparent 55%),
-            linear-gradient(180deg, rgba(255,250,241,0.92), rgba(251,245,233,0.88));
-          border: 1px solid rgba(26,18,10,0.10);
+            radial-gradient(140% 90% at 0% 0%, var(--kd-accent-soft) 0%, transparent 55%),
+            var(--kd-card);
+          border: 1px solid var(--kd-line-mid);
           box-shadow:
-            0 1px 0 rgba(255,255,255,0.6) inset,
-            0 12px 28px -18px rgba(58,40,18,0.35),
-            0 2px 6px -2px rgba(58,40,18,0.10);
+            0 1px 0 var(--kd-line-soft) inset,
+            0 12px 28px -18px var(--kd-overlay),
+            0 2px 6px -2px var(--kd-line);
           backdrop-filter: saturate(1.1) blur(6px);
           -webkit-backdrop-filter: saturate(1.1) blur(6px);
         }
@@ -696,10 +749,9 @@ function TableOfContents({ state, setState, items }) {
           position: absolute; inset: 0;
           border-radius: 14px;
           pointer-events: none;
-          background-image: radial-gradient(rgba(26,18,10,0.05) 1px, transparent 1px);
+          background-image: radial-gradient(var(--kd-line) 1px, transparent 1px);
           background-size: 6px 6px;
           opacity: 0.5;
-          mix-blend-mode: multiply;
         }
         .v1-toc-eyebrow {
           font-family: 'JetBrains Mono', ui-monospace, monospace;
@@ -729,7 +781,7 @@ function TableOfContents({ state, setState, items }) {
           position: absolute;
           left: 5px; top: 6px; bottom: 6px;
           width: 1px;
-          background: rgba(26,18,10,0.12);
+          background: var(--kd-line-mid);
           border-radius: 1px;
           overflow: visible;
         }
@@ -739,7 +791,7 @@ function TableOfContents({ state, setState, items }) {
           left: -0.5px; top: 0;
           width: 2px;
           height: var(--scroll-pct, 0%);
-          background: linear-gradient(180deg, ${P.accent}, #8a3014);
+          background: var(--kd-accent);
           border-radius: 2px;
           transition: height 0.18s ease-out;
         }
@@ -748,13 +800,13 @@ function TableOfContents({ state, setState, items }) {
           left: -3.5px;
           top: var(--dot-top, 0%);
           width: 9px; height: 9px;
-          background: ${P.accent};
-          border: 2px solid ${P.card};
+          background: var(--kd-accent);
+          border: 2px solid var(--kd-card);
           border-radius: 50%;
           box-shadow:
-            0 0 0 1px ${P.accent},
-            0 0 0 4px rgba(193,74,28,0.18),
-            0 0 12px rgba(193,74,28,0.5);
+            0 0 0 1px var(--kd-accent),
+            0 0 0 4px var(--kd-accent-soft),
+            0 0 12px var(--kd-accent-soft);
           transition: top 0.45s cubic-bezier(.5,.1,.2,1);
           pointer-events: none;
         }
@@ -796,6 +848,19 @@ function TableOfContents({ state, setState, items }) {
           font-weight: 500;
           letter-spacing: 0;
         }
+        /* Blinking ASCII cursor in front of the active row's label. */
+        .v1-toc-row.is-active .v1-toc-link::before {
+          content: ">";
+          font-family: 'JetBrains Mono', ui-monospace, monospace;
+          color: ${P.accent};
+          font-weight: 700;
+          margin-right: 5px;
+          animation: kd-cursor-blink 1.05s step-end infinite;
+        }
+        @keyframes kd-cursor-blink {
+          0%, 60% { opacity: 1; }
+          61%, 100% { opacity: 0.15; }
+        }
         .v1-toc-row.is-active .v1-toc-num {
           color: ${P.accent};
           font-weight: 700;
@@ -803,7 +868,7 @@ function TableOfContents({ state, setState, items }) {
         .v1-toc-row.is-collapsed .v1-toc-link {
           color: ${P.dim};
           text-decoration: line-through;
-          text-decoration-color: rgba(26,18,10,0.18);
+          text-decoration-color: var(--kd-line-strong);
           text-decoration-thickness: 1px;
         }
         .v1-toc-toggle {
@@ -819,13 +884,13 @@ function TableOfContents({ state, setState, items }) {
         }
         .v1-toc-toggle:hover {
           color: ${P.accent};
-          background: rgba(193,74,28,0.08);
+          background: var(--kd-accent-soft);
           transform: scale(1.1);
         }
         .v1-toc-foot {
           margin-top: 14px;
           padding: 8px 0 0 22px;
-          border-top: 1px dashed rgba(26,18,10,0.12);
+          border-top: 1px dashed var(--kd-line-mid);
           font-family: 'JetBrains Mono', ui-monospace, monospace;
           font-size: 9px;
           letter-spacing: 1px;

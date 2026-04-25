@@ -27,26 +27,30 @@
   const STATUS_COLOR  = Object.fromEntries(STATUS_OPTIONS.map(o => [o.key, o.color]));
   const URGENCY_COLOR = Object.fromEntries(URGENCY_OPTIONS.map(o => [o.key, o.color]));
 
+  // Palette is exposed as CSS custom properties so themes can be swapped
+  // by toggling [data-theme] on the root. The actual color values live
+  // in index.html under :root and [data-theme="dark"]. Keeping the same
+  // P.foo shape means inline styles across components still "just work".
   const PALETTE = {
-    paper:    '#f5efe4',
-    card:     '#fffaf1',
-    drawer:   '#fbf5e9',
-    hover:    '#f0e7d4',
-    ink:      '#1a120a',
-    dimStrong:'#4d3f31',
-    dim:      '#7a6a55',
-    dimSoft:  '#b0a288',
-    accent:   '#c14a1c',
-    accentSoft: '#f4e0cb',
-    danger:   '#a02a2a',
-    success:  '#3f7a3a',
-    lineSoft:   'rgba(26,18,10,0.06)',
-    line:       'rgba(26,18,10,0.09)',
-    lineMid:    'rgba(26,18,10,0.13)',
-    lineStrong: 'rgba(26,18,10,0.17)',
-    lineDashed: 'rgba(26,18,10,0.20)',
-    overlay:       'rgba(26,18,10,0.28)',
-    overlayStrong: 'rgba(26,18,10,0.42)',
+    paper:         'var(--kd-paper)',
+    card:          'var(--kd-card)',
+    drawer:        'var(--kd-drawer)',
+    hover:         'var(--kd-hover)',
+    ink:           'var(--kd-ink)',
+    dimStrong:     'var(--kd-dim-strong)',
+    dim:           'var(--kd-dim)',
+    dimSoft:       'var(--kd-dim-soft)',
+    accent:        'var(--kd-accent)',
+    accentSoft:    'var(--kd-accent-soft)',
+    danger:        'var(--kd-danger)',
+    success:       'var(--kd-success)',
+    lineSoft:      'var(--kd-line-soft)',
+    line:          'var(--kd-line)',
+    lineMid:       'var(--kd-line-mid)',
+    lineStrong:    'var(--kd-line-strong)',
+    lineDashed:    'var(--kd-line-dashed)',
+    overlay:       'var(--kd-overlay)',
+    overlayStrong: 'var(--kd-overlay-strong)',
   };
 
   const DEFAULTS = {
@@ -80,9 +84,10 @@
       ],
     },
 
-    // UI state — section collapse/expand persists across reloads.
+    // UI state — section collapse/expand and theme persist across reloads.
     ui: {
       collapsed: {},
+      theme: 'light',  // 'light' | 'dark'
     },
 
     // Fintiba blocked account — the €12,063 deposit that releases €992/mo
