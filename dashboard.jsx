@@ -153,6 +153,7 @@ function VariationA({ onReset }) {
           <div style={{ color: P.dim, fontSize: 11 }}>
             Köln · 15° Cloudy · €1 = ${state.money.fxEurUsd.toFixed(2)}
           </div>
+          <ThemeToggle state={state} setState={setState}/>
         </div>
       </header>
 

@@ -10,7 +10,77 @@
 <style>
   html, body, #root { margin: 0; padding: 0; }
   html { -webkit-text-size-adjust: 100%; }
-  body { background: #e9ddc6; font-family: 'Figtree', -apple-system, 'Segoe UI', sans-serif; font-feature-settings: 'ss01', 'cv11'; }
+
+  /* Theme tokens — light is the warm-sand notebook, dark is a phosphor
+     terminal that keeps the warm DNA (cream on near-black, accent stays
+     orange). All inline P.foo refs across components map to these vars. */
+  :root, [data-theme="light"] {
+    --kd-paper:        #f5efe4;
+    --kd-card:         #fffaf1;
+    --kd-drawer:       #fbf5e9;
+    --kd-hover:        #f0e7d4;
+    --kd-ink:          #1a120a;
+    --kd-dim-strong:   #4d3f31;
+    --kd-dim:          #7a6a55;
+    --kd-dim-soft:     #b0a288;
+    --kd-accent:       #c14a1c;
+    --kd-accent-soft:  #f4e0cb;
+    --kd-danger:       #a02a2a;
+    --kd-success:      #3f7a3a;
+    --kd-line-soft:    rgba(26,18,10,0.06);
+    --kd-line:         rgba(26,18,10,0.09);
+    --kd-line-mid:     rgba(26,18,10,0.13);
+    --kd-line-strong:  rgba(26,18,10,0.17);
+    --kd-line-dashed:  rgba(26,18,10,0.20);
+    --kd-overlay:      rgba(26,18,10,0.28);
+    --kd-overlay-strong: rgba(26,18,10,0.42);
+    --kd-body-bg:      #e9ddc6;
+    --kd-scanlines:    transparent;
+  }
+  [data-theme="dark"] {
+    --kd-paper:        #13100b;
+    --kd-card:         #1c1812;
+    --kd-drawer:       #1f1a13;
+    --kd-hover:        #2a231a;
+    --kd-ink:          #f0e6d0;
+    --kd-dim-strong:   #d4c5a3;
+    --kd-dim:          #a59679;
+    --kd-dim-soft:     #7a6b54;
+    --kd-accent:       #e07140;
+    --kd-accent-soft:  rgba(224,113,64,0.14);
+    --kd-danger:       #d95d5d;
+    --kd-success:      #6fae66;
+    --kd-line-soft:    rgba(232,220,196,0.06);
+    --kd-line:         rgba(232,220,196,0.09);
+    --kd-line-mid:     rgba(232,220,196,0.14);
+    --kd-line-strong:  rgba(232,220,196,0.20);
+    --kd-line-dashed:  rgba(232,220,196,0.24);
+    --kd-overlay:      rgba(0,0,0,0.55);
+    --kd-overlay-strong: rgba(0,0,0,0.72);
+    --kd-body-bg:      #0d0a08;
+    --kd-scanlines: repeating-linear-gradient(
+      to bottom,
+      rgba(232,220,196,0.025) 0px,
+      rgba(232,220,196,0.025) 1px,
+      transparent 1px,
+      transparent 4px
+    );
+  }
+  body {
+    background: var(--kd-body-bg);
+    font-family: 'Figtree', -apple-system, 'Segoe UI', sans-serif;
+    font-feature-settings: 'ss01', 'cv11';
+    transition: background 0.3s ease;
+  }
+  /* CRT phosphor scanlines — only painted in dark mode (light has transparent). */
+  body::before {
+    content: "";
+    position: fixed; inset: 0;
+    pointer-events: none;
+    background: var(--kd-scanlines);
+    z-index: 9999;
+    mix-blend-mode: overlay;
+  }
   * { box-sizing: border-box; }
   #root { min-height: 100vh; }
   .v1-wrap { max-width: 1420px; margin: 0 auto; }
