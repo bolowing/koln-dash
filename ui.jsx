@@ -754,56 +754,38 @@ function MilestoneTimeline({ state, setState, categories }) {
   );
 }
 
-// ASCII-vibes light/dark toggle. Lives in the masthead. Reads/writes
-// state.ui.theme and pushes the active theme onto <html data-theme>.
+// Single-icon light/dark toggle. Shows the icon you'd switch TO —
+// click ☾ to go dark, ☀ to go light.
 function ThemeToggle({ state, setState }) {
   const theme = (state.ui && state.ui.theme) || 'light';
   React.useEffect(() => {
     document.documentElement.dataset.theme = theme;
   }, [theme]);
-  const setTheme = (t) => setState(s => ({
-    ...s, ui: { ...s.ui, theme: t },
-  }));
-  const segStyle = (active) => ({
-    cursor: 'pointer',
-    background: active ? P.accent : 'transparent',
-    color: active ? P.card : P.dim,
-    border: 'none',
-    padding: '4px 9px',
-    font: 'inherit',
-    fontFamily: "'JetBrains Mono', ui-monospace, monospace",
-    fontSize: 10,
-    letterSpacing: 1.4,
-    textTransform: 'uppercase',
-    fontWeight: 700,
-    transition: 'background 0.18s ease, color 0.18s ease',
-  });
+  const next = theme === 'light' ? 'dark' : 'light';
+  const icon = next === 'dark' ? '☾' : '☀';
+  const toggle = () => setState(s => ({ ...s, ui: { ...s.ui, theme: next } }));
   return (
-    <div className="va-mono" style={{
-      display: 'inline-flex', alignItems: 'center',
-      border: `1px solid ${P.lineMid}`,
-      borderRadius: 4, overflow: 'hidden',
-      background: P.card,
-      boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
-    }}>
-      <span aria-hidden="true" style={{
-        padding: '4px 6px 4px 8px', color: P.dimSoft,
-        fontFamily: "'JetBrains Mono', ui-monospace, monospace",
-        fontSize: 10, letterSpacing: 1,
-      }}>[</span>
-      <button onClick={() => setTheme('light')} style={segStyle(theme === 'light')} title="Light theme">
-        {theme === 'light' ? '☀ SUN' : 'SUN'}
-      </button>
-      <span aria-hidden="true" style={{ color: P.dimSoft, padding: '4px 1px', fontSize: 10 }}>·</span>
-      <button onClick={() => setTheme('dark')} style={segStyle(theme === 'dark')} title="Dark theme">
-        {theme === 'dark' ? '☾ MOON' : 'MOON'}
-      </button>
-      <span aria-hidden="true" style={{
-        padding: '4px 8px 4px 6px', color: P.dimSoft,
-        fontFamily: "'JetBrains Mono', ui-monospace, monospace",
-        fontSize: 10, letterSpacing: 1,
-      }}>]</span>
-    </div>
+    <button
+      onClick={toggle}
+      title={next === 'dark' ? 'Switch to dark' : 'Switch to light'}
+      aria-label={next === 'dark' ? 'Switch to dark mode' : 'Switch to light mode'}
+      style={{
+        cursor: 'pointer',
+        width: 30, height: 30,
+        border: `1px solid ${P.lineMid}`,
+        borderRadius: 999,
+        background: P.card,
+        color: P.dimStrong,
+        fontSize: 15, lineHeight: 1,
+        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+        boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
+        transition: 'background 0.18s ease, color 0.18s ease, transform 0.18s ease',
+      }}
+      onMouseEnter={e => { e.currentTarget.style.background = P.hover; e.currentTarget.style.color = P.accent; }}
+      onMouseLeave={e => { e.currentTarget.style.background = P.card;  e.currentTarget.style.color = P.dimStrong; }}
+    >
+      <span aria-hidden="true">{icon}</span>
+    </button>
   );
 }
 

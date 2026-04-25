@@ -1363,6 +1363,31 @@ function FxCalculator({ state, setState }) {
         <span>€1 = ${fxEurUsd.toFixed(4)}</span>
         <span>€1 = Rp {Math.round(fxEurIdr).toLocaleString('id-ID')}</span>
       </div>
+
+      <div className="va-mono" style={{
+        marginTop: 6,
+        fontSize: 9, letterSpacing: 1, color: P.dimSoft,
+        textTransform: 'uppercase', fontWeight: 600,
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        gap: 8, flexWrap: 'wrap',
+      }}>
+        <a
+          href="https://open.er-api.com/v6/latest/EUR"
+          target="_blank" rel="noopener noreferrer"
+          style={{ color: P.dimSoft, textDecoration: 'none', borderBottom: `1px dashed ${P.lineMid}` }}
+          title="Open the raw rate JSON in a new tab"
+        >via open.er-api.com</a>
+        <a
+          href={`https://www.google.com/finance/quote/EUR-${focused === 'EUR' ? 'USD' : focused}`}
+          target="_blank" rel="noopener noreferrer"
+          style={{
+            color: P.accent, textDecoration: 'none',
+            border: `1px solid ${P.lineMid}`, borderRadius: 999,
+            padding: '2px 8px', fontWeight: 700,
+          }}
+          title="Spot-check on Google Finance"
+        >📈 Google</a>
+      </div>
     </div>
   );
 }
