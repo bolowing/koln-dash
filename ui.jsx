@@ -611,6 +611,359 @@ function parseWhen(when, baseYear) {
   return null;
 }
 
+// Live departure clock for the hero row. Ticks every minute so the
+// hours readout stays current. Shows the next upcoming milestone
+// pulled from state.upcoming as an actionable teaser.
+function DepartureClock({ state }) {
+  const [now, setNow] = React.useState(() => new Date());
+  React.useEffect(() => {
+    const t = setInterval(() => setNow(new Date()), 60_000);
+    return () => clearInterval(t);
+  }, []);
+
+  const dep = new Date(state.meta.departure + 'T00:00:00');
+  const ms = dep - now;
+  const arrived = ms <= 0;
+  const totalMin = Math.max(0, Math.floor(Math.abs(ms) / 60_000));
+  const totalH = Math.floor(totalMin / 60);
+  const totalD = Math.floor(totalH / 24);
+  const weeks = Math.floor(totalD / 7);
+  const remH = totalH - totalD * 24;
+
+  // Find the next upcoming milestone after today (parsed from free-form when).
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const nextMilestone = (state.upcoming || [])
+    .map(u => ({ ...u, _date: parseWhen(u.when, dep.getFullYear()) }))
+    .filter(u => u._date && u._date >= today)
+    .sort((a, b) => a._date - b._date)[0];
+
+  const daysToNext = nextMilestone
+    ? Math.max(0, Math.round((nextMilestone._date - today) / (1000 * 60 * 60 * 24)))
+    : null;
+
+  const depWeekday = dep.toLocaleDateString('en-US', { weekday: 'short' });
+  const depDate    = dep.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
+  // Destination from meta if set, else fallback. Hardcoding 'Köln' for now.
+  const destination = (state.meta && state.meta.destination) || 'Köln';
+
+  return (
+    <div className="v1-clock">
+      <style>{`
+        .v1-clock {
+          position: relative;
+          background: var(--kd-ink);
+          color: var(--kd-paper);
+          border-radius: 18px;
+          padding: 18px 22px 16px;
+          overflow: hidden;
+          display: flex; flex-direction: column; gap: 10px;
+          min-height: 100%;
+        }
+        .v1-clock::before {
+          content: "";
+          position: absolute; inset: 0;
+          pointer-events: none;
+          background-image: radial-gradient(rgba(232,220,196,0.08) 1px, transparent 1px);
+          background-size: 16px 16px;
+          opacity: 0.6;
+        }
+        .v1-clock::after {
+          content: "";
+          position: absolute;
+          top: -40%; right: -10%;
+          width: 60%; height: 80%;
+          background: radial-gradient(circle, rgba(224,113,64,0.22) 0%, transparent 60%);
+          pointer-events: none;
+        }
+        .v1-clock > * { position: relative; z-index: 1; }
+
+        /* ASCII airplane — bigger, more visible, hovers in the upper-right
+           with a gentle bob and an accent-colored body so it actually reads. */
+        .v1-clock-plane {
+          position: absolute;
+          top: 48px; right: 28px;
+          z-index: 1;
+          width: 64px; height: 64px;
+          color: var(--kd-accent);
+          filter: drop-shadow(0 0 10px rgba(224,113,64,0.55));
+          pointer-events: none;
+          animation: kd-plane-bob 3.6s ease-in-out infinite;
+          transform-origin: 50% 50%;
+        }
+        .v1-clock-plane svg { width: 100%; height: 100%; display: block; }
+        @keyframes kd-plane-bob {
+          0%, 100% { transform: translate(0, 0)    rotate(42deg); }
+          50%      { transform: translate(2px, -4px) rotate(46deg); }
+        }
+        /* Contrail — animated dashes that flow leftward FROM the plane,
+           giving the impression it's flying right. */
+        .v1-clock-contrail {
+          position: absolute;
+          top: 78px; right: 96px;
+          width: 220px; height: 2px;
+          z-index: 0;
+          background-image: repeating-linear-gradient(
+            to right,
+            rgba(224,113,64,0.55) 0,
+            rgba(224,113,64,0.55) 4px,
+            transparent 4px,
+            transparent 12px
+          );
+          mask-image: linear-gradient(to right, transparent 0%, #000 60%, #000 100%);
+          -webkit-mask-image: linear-gradient(to right, transparent 0%, #000 60%, #000 100%);
+          animation: kd-contrail-flow 1.2s linear infinite;
+          pointer-events: none;
+        }
+        @keyframes kd-contrail-flow {
+          0%   { background-position: 0 0; }
+          100% { background-position: 12px 0; }
+        }
+        /* Subtle pulsing transmission dot — top-left, signals "live". */
+        .v1-clock-pulse {
+          position: absolute;
+          top: 22px; left: 22px;
+          z-index: 2;
+          width: 7px; height: 7px;
+          border-radius: 50%;
+          background: var(--kd-accent);
+          box-shadow: 0 0 0 0 rgba(224,113,64,0.6);
+          animation: kd-pulse-dot 1.8s ease-out infinite;
+        }
+        @keyframes kd-pulse-dot {
+          0%   { box-shadow: 0 0 0 0 rgba(224,113,64,0.55); transform: scale(1); }
+          70%  { box-shadow: 0 0 0 10px rgba(224,113,64,0);   transform: scale(1); }
+          100% { box-shadow: 0 0 0 0 rgba(224,113,64,0);     transform: scale(1); }
+        }
+        /* Dashed runway trail along the bottom — beefier so it actually shows. */
+        .v1-clock-runway {
+          position: absolute;
+          left: 18px; right: 18px; bottom: 6px;
+          height: 2px;
+          background-image: repeating-linear-gradient(
+            to right,
+            rgba(232,220,196,0.32) 0,
+            rgba(232,220,196,0.32) 8px,
+            transparent 8px,
+            transparent 16px
+          );
+          z-index: 0;
+          animation: kd-runway-drift 1.6s linear infinite;
+        }
+        @keyframes kd-runway-drift {
+          0%   { background-position: 0 0; }
+          100% { background-position: -16px 0; }
+        }
+        .v1-clock-flightno {
+          position: absolute;
+          top: 18px; right: 22px;
+          z-index: 2;
+          font-family: 'JetBrains Mono', ui-monospace, monospace;
+          font-size: 8.5px; letter-spacing: 1.4px; font-weight: 700;
+          color: var(--kd-accent);
+          opacity: 0.85;
+          padding: 3px 8px;
+          border: 1px solid rgba(224,113,64,0.5);
+          border-radius: 3px;
+          background: rgba(224,113,64,0.08);
+        }
+
+        .v1-clock-eyebrow {
+          display: flex; align-items: baseline; justify-content: space-between;
+          font-family: 'JetBrains Mono', ui-monospace, monospace;
+          font-size: 9.5px; letter-spacing: 2.4px; font-weight: 700;
+          text-transform: uppercase;
+          color: var(--kd-accent);
+        }
+        .v1-clock-eyebrow .arrow {
+          display: inline-block;
+          margin: 0 6px;
+          color: var(--kd-paper);
+          opacity: 0.5;
+          animation: kd-arrow-pulse 2.6s ease-in-out infinite;
+        }
+        .v1-clock-eyebrow .dest {
+          color: var(--kd-paper);
+          letter-spacing: 1.2px;
+        }
+        .v1-clock-eyebrow .stamp {
+          color: var(--kd-paper);
+          opacity: 0.45;
+          font-size: 8.5px;
+          letter-spacing: 1.4px;
+        }
+        @keyframes kd-arrow-pulse {
+          0%, 100% { transform: translateX(0); opacity: 0.45; }
+          50%      { transform: translateX(3px); opacity: 0.85; }
+        }
+
+        .v1-clock-num-row {
+          display: flex; align-items: baseline; gap: 14px;
+          margin-top: 2px;
+        }
+        .v1-clock-num {
+          font-family: 'Bricolage Grotesque', system-ui, sans-serif;
+          font-size: 80px; line-height: 0.95;
+          font-weight: 500; letter-spacing: -3px;
+          color: var(--kd-paper);
+          font-variant-numeric: tabular-nums;
+          text-shadow:
+            0 0 20px rgba(224,113,64,0.25),
+            0 0 40px rgba(224,113,64,0.12);
+        }
+        .v1-clock-unit {
+          font-family: 'JetBrains Mono', ui-monospace, monospace;
+          font-size: 11px; letter-spacing: 2px; font-weight: 700;
+          text-transform: uppercase;
+          color: var(--kd-paper);
+          opacity: 0.6;
+        }
+        .v1-clock-arrived {
+          color: var(--kd-accent);
+          font-family: 'JetBrains Mono', ui-monospace, monospace;
+          font-size: 14px; letter-spacing: 3px;
+          font-weight: 700;
+          text-transform: uppercase;
+        }
+
+        .v1-clock-breakdown {
+          display: flex; gap: 14px; flex-wrap: wrap;
+          margin-top: -4px;
+          font-family: 'JetBrains Mono', ui-monospace, monospace;
+          font-size: 10px; letter-spacing: 1.2px; font-weight: 600;
+          color: var(--kd-paper);
+          opacity: 0.6;
+        }
+        .v1-clock-breakdown .sep {
+          opacity: 0.4;
+        }
+
+        .v1-clock-eta {
+          margin-top: auto;
+          padding-top: 10px;
+          border-top: 1px dashed rgba(232,220,196,0.18);
+          display: flex; align-items: baseline; justify-content: space-between;
+          gap: 12px; flex-wrap: wrap;
+          font-family: 'JetBrains Mono', ui-monospace, monospace;
+          font-size: 10px; letter-spacing: 1.4px; font-weight: 600;
+          text-transform: uppercase;
+          color: var(--kd-paper);
+        }
+        .v1-clock-eta .label {
+          color: var(--kd-accent);
+          font-weight: 700;
+          letter-spacing: 2px;
+          margin-right: 6px;
+        }
+        .v1-clock-eta .val {
+          opacity: 0.85;
+        }
+        .v1-clock-eta .weekday {
+          color: var(--kd-paper);
+          opacity: 0.65;
+          margin-right: 4px;
+        }
+
+        .v1-clock-next {
+          padding-top: 8px;
+          margin-top: 4px;
+          border-top: 1px dashed rgba(232,220,196,0.12);
+          display: flex; align-items: baseline; gap: 8px;
+          font-family: 'Figtree', sans-serif;
+          font-size: 12px;
+          color: var(--kd-paper);
+          opacity: 0.85;
+        }
+        .v1-clock-next .key {
+          font-family: 'JetBrains Mono', ui-monospace, monospace;
+          font-size: 9px; letter-spacing: 2px; font-weight: 700;
+          color: var(--kd-accent);
+          text-transform: uppercase;
+          flex-shrink: 0;
+        }
+        .v1-clock-next .what {
+          flex: 1;
+          overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+          font-weight: 500;
+        }
+        .v1-clock-next .when {
+          font-family: 'JetBrains Mono', ui-monospace, monospace;
+          font-size: 10px; letter-spacing: 1px; font-weight: 700;
+          color: var(--kd-paper);
+          opacity: 0.6;
+          flex-shrink: 0;
+        }
+
+        @media (max-width: 720px) {
+          .v1-clock-num { font-size: 64px !important; letter-spacing: -2px !important; }
+          .v1-clock { padding: 16px 18px 14px; }
+        }
+      `}</style>
+
+      {/* Decorative ASCII layer */}
+      <div className="v1-clock-pulse" aria-hidden="true"/>
+      <div className="v1-clock-contrail" aria-hidden="true"/>
+      <div className="v1-clock-plane" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="currentColor">
+          {/* Top-down jet silhouette: nose up, wings mid, tail bottom */}
+          <path d="M12 1.5c-.5 0-.9.45-.9 1v6.05L2.4 12.7c-.3.15-.5.45-.5.8v1.4c0 .35.3.6.65.55L11.1 14l.25 4.05-2.1 1.45c-.2.15-.32.4-.32.65v.6c0 .35.3.6.65.55L12 20.5l2.42.8c.35.05.65-.2.65-.55v-.6c0-.25-.12-.5-.32-.65l-2.1-1.45L12.9 14l8.55 1.45c.35.05.65-.2.65-.55v-1.4c0-.35-.2-.65-.5-.8L12.9 8.55V2.5c0-.55-.4-1-.9-1z"/>
+        </svg>
+      </div>
+      <div className="v1-clock-runway" aria-hidden="true"/>
+      <div className="v1-clock-flightno" aria-hidden="true">▶ FLT KÖLN-26</div>
+
+      <div className="v1-clock-eyebrow">
+        <span>
+          {arrived ? 'Arrived' : 'Departure'}
+          <span className="arrow">→</span>
+          <span className="dest">{destination}</span>
+        </span>
+      </div>
+
+      <div className="v1-clock-num-row">
+        {arrived ? (
+          <span className="v1-clock-arrived">✈ Vor Ort</span>
+        ) : (
+          <>
+            <span className="v1-clock-num">{totalD}</span>
+            <span className="v1-clock-unit">Days</span>
+          </>
+        )}
+      </div>
+
+      {!arrived && (
+        <div className="v1-clock-breakdown">
+          <span>{weeks} W</span>
+          <span className="sep">·</span>
+          <span>{totalH.toLocaleString()} H</span>
+          <span className="sep">·</span>
+          <span>{remH} H REM</span>
+        </div>
+      )}
+
+      <div className="v1-clock-eta">
+        <span>
+          <span className="label">{arrived ? 'Was' : 'ETA'}</span>
+          <span className="weekday">{depWeekday.toUpperCase()}</span>
+          <span className="val">{depDate.toUpperCase()}</span>
+        </span>
+        <span className="val">≈ {weeks} wks</span>
+      </div>
+
+      {nextMilestone && (
+        <div className="v1-clock-next" title={`${nextMilestone.what} · ${nextMilestone.when}`}>
+          <span className="key">Next</span>
+          <span className="what">{nextMilestone.what}</span>
+          <span className="when">
+            {nextMilestone.when.toUpperCase()}
+            {daysToNext !== null && (daysToNext === 0 ? ' · TODAY' : ` · ${daysToNext}d`)}
+          </span>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // Mini month grid used by MilestoneCalendar. Shows days as a 7-col
 // grid; days with a milestone are filled with the category color.
 function MiniMonth({ year, month, milestones, today, departureKey, onPick }) {
