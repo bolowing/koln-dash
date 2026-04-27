@@ -630,10 +630,13 @@ function DepartureClock({ state }) {
   const weeks = Math.floor(totalD / 7);
   const remH = totalH - totalD * 24;
 
-  // Find the next upcoming milestone after today (parsed from free-form when).
+  // Find the next upcoming milestone after today. Prefer the explicit
+  // ISO date if present; fall back to parsing the free-form when text.
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const nextMilestone = (state.upcoming || [])
-    .map(u => ({ ...u, _date: parseWhen(u.when, dep.getFullYear()) }))
+    .map(u => ({ ...u,
+      _date: u.date ? new Date(u.date + 'T00:00:00') : parseWhen(u.when, dep.getFullYear()),
+    }))
     .filter(u => u._date && u._date >= today)
     .sort((a, b) => a._date - b._date)[0];
 
@@ -1825,8 +1828,12 @@ function MilestoneCalendar({ items, categories, departure, onPick }) {
   const baseYear = startY;
 
   // Decorate items with parsed date + category color/bg for the grid.
+  // Prefer the explicit `date` field (ISO YYYY-MM-DD set via the date
+  // picker) over the heuristic parse of the free-form `when` text.
   const decorated = items.map(it => {
-    const d = parseWhen(it.when, baseYear);
+    const d = it.date
+      ? new Date(it.date + 'T00:00:00')
+      : parseWhen(it.when, baseYear);
     const cd = categories[it.cat] || { color: P.dim, bg: P.lineSoft };
     return { ...it, _date: d, _color: cd.color, _bg: cd.bg,
       _key: d ? `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}` : null };
@@ -1899,20 +1906,39 @@ function MilestoneCalendar({ items, categories, departure, onPick }) {
 function MilestoneTimeline({ state, setState, categories }) {
   const items = Array.isArray(state.upcoming) ? state.upcoming : [];
   const [adding, setAdding] = React.useState(false);
-  const [draft, setDraft] = React.useState({ when: '', what: '', cat: 'Personal' });
+  const [draft, setDraft] = React.useState({ date: '', when: '', what: '', cat: 'Personal' });
 
   const catNames = Object.keys(categories);
 
+  // If user picks a date, auto-fill the display label ("Apr 27") unless
+  // they've already typed something custom in the when field.
+  const onDateChange = (iso) => {
+    setDraft(d => {
+      let when = d.when;
+      const wasAuto = !d.when || d.when === d._autoWhen;
+      if (iso && wasAuto) {
+        const dt = new Date(iso + 'T00:00:00');
+        when = dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      }
+      return { ...d, date: iso, when, _autoWhen: wasAuto ? when : d._autoWhen };
+    });
+  };
+
   const addMilestone = () => {
-    const when = draft.when.trim();
-    const what = draft.what.trim();
-    if (!when || !what) return;
+    const when = (draft.when || '').trim();
+    const what = (draft.what || '').trim();
+    if (!what) return;             // need a label
+    if (!when && !draft.date) return; // need either a date or a label
     const id = 'mu-' + Date.now();
+    const entry = { id, when: when || (draft.date
+      ? new Date(draft.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+      : ''), what, cat: draft.cat };
+    if (draft.date) entry.date = draft.date;  // ISO YYYY-MM-DD for the calendar
     setState(s => ({
       ...s,
-      upcoming: [...(s.upcoming || []), { id, when, what, cat: draft.cat }],
+      upcoming: [...(s.upcoming || []), entry],
     }));
-    setDraft({ when: '', what: '', cat: 'Personal' });
+    setDraft({ date: '', when: '', what: '', cat: 'Personal' });
     setAdding(false);
   };
 
@@ -2018,13 +2044,26 @@ function MilestoneTimeline({ state, setState, categories }) {
         <div className="va-sans v1-milestone-form" style={{
           marginTop: 14, padding: 12, borderRadius: 10,
           border: `1px dashed ${P.lineDashed}`, background: P.drawer,
-          display: 'grid', gridTemplateColumns: '90px 1fr 130px auto', gap: 8,
+          display: 'grid', gridTemplateColumns: '140px 110px 1fr 130px auto', gap: 8,
           alignItems: 'center',
         }}>
           <input
-            type="text" placeholder="When" value={draft.when}
-            onChange={e => setDraft(d => ({ ...d, when: e.target.value }))}
+            type="date" value={draft.date}
+            onChange={e => onDateChange(e.target.value)}
+            title="Pick a date — plots a dot on the calendar above"
             autoFocus
+            style={{
+              border: `1px solid ${P.lineMid}`, background: P.card,
+              padding: '6px 8px', borderRadius: 6, fontSize: 12,
+              fontFamily: 'inherit', color: P.ink, minWidth: 0,
+            }}
+          />
+          <input
+            type="text"
+            placeholder={draft.date ? 'Label (auto)' : 'When (free text)'}
+            value={draft.when}
+            onChange={e => setDraft(d => ({ ...d, when: e.target.value }))}
+            title="How the date shows in the list (e.g. 'Apr 27', 'May/Jun', 'TBD')"
             style={{
               border: `1px solid ${P.lineMid}`, background: P.card,
               padding: '6px 8px', borderRadius: 6, fontSize: 12,
@@ -2058,7 +2097,7 @@ function MilestoneTimeline({ state, setState, categories }) {
               padding: '6px 12px', borderRadius: 6, fontSize: 11,
               fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
             }}>Add</button>
-            <button onClick={() => { setAdding(false); setDraft({ when: '', what: '', cat: 'Personal' }); }} style={{
+            <button onClick={() => { setAdding(false); setDraft({ date: '', when: '', what: '', cat: 'Personal' }); }} style={{
               border: `1px solid ${P.lineMid}`, background: 'transparent',
               color: P.dim, padding: '6px 10px', borderRadius: 6, fontSize: 11,
               fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit',
