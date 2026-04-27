@@ -143,9 +143,9 @@
       VJ: [
         { id: 't1',  text: 'Share Fintiba details + wire instructions', cat: 'Financial', due: 'May 1', urgency: 'soon' },
         { id: 't2',  text: 'Apply for Visa credit card (Indonesian bank)', cat: 'Banking', due: 'Pre-departure', urgency: 'soon' },
-        { id: 't3',  text: 'Confirm JIS registrar signature on HS cert', cat: 'Visa docs', due: 'ASAP', urgency: 'asap' },
+        { id: 't3',  text: 'JIS diploma — get agent sign-off on stamp-only path or letter of support', cat: 'Visa docs', due: 'ASAP', urgency: 'asap' },
         { id: 't4',  text: 'Apostille + translate birth certificate', cat: 'Visa docs', due: 'ASAP', urgency: 'asap' },
-        { id: 't5',  text: 'Apostille + translate HS cert + report', cat: 'Visa docs', due: 'ASAP', urgency: 'asap' },
+        { id: 't5',  text: 'Apostille + translate HS transcript (signed Apr 26 ✓)', cat: 'Visa docs', due: 'ASAP', urgency: 'asap' },
         { id: 't6',  text: 'Request BINUS double degree letter', cat: 'Visa docs', due: 'ASAP', urgency: 'asap' },
         { id: 't7',  text: 'Request final BINUS transcript', cat: 'Visa docs', due: 'ASAP', urgency: 'asap' },
         { id: 't8',  text: 'Write motivation letter (signed + dated)', cat: 'Visa docs', due: 'ASAP', urgency: 'asap' },
@@ -159,10 +159,12 @@
         { id: 'j2', text: 'Initiate Merrill 529 Wire 2 (€10,150)', cat: 'Financial', due: 'ASAP', urgency: 'asap' },
         { id: 'j3', text: 'Fund Fintiba blocked account (€12,063)', cat: 'Financial', due: 'After W2', urgency: 'soon' },
         { id: 'j4', text: 'Book Germany trip with Hafiz (move-in)', cat: 'Travel', due: 'TBD', urgency: 'later' },
+        { id: 'j5', text: 'Verify Fintiba SSN ask DIRECTLY (not via agent chat)', cat: 'Banking', due: 'ASAP', urgency: 'asap' },
       ],
     },
 
     upcoming: [
+      { id: 'mu-jis-partial', when: 'Apr 26', what: 'JIS transcript signed ✓ · diploma stamp-only (agent reviewing)', cat: 'Visa docs' },
       { id: 'mu-wire1', when: 'May 1',  what: 'Confirm Wire 1 received',   cat: 'Financial' },
       { id: 'mu-wire2', when: 'May',    what: 'Send Wire 2 to CBS',        cat: 'Financial' },
       { id: 'mp-trip',  when: 'May/Jun', what: 'Plan Germany move-in trip (Jul + Hafiz)', cat: 'Personal' },
