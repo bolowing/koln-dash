@@ -1018,13 +1018,13 @@ function MiniMonth({ year, month, milestones, today, departureKey, onPick }) {
           const isDeparture = key === departureKey;
           const primary = ms[0];
           const fill = primary ? primary._color : 'transparent';
-          const fg   = primary ? primary._bg    : P.dim;
+          const isTask = primary && primary._kind === 'task';
           return (
             <button
               key={key}
-              onClick={() => primary && onPick(primary.id)}
+              onClick={() => primary && onPick(primary)}
               title={ms.length
-                ? ms.map(m => `${m.what} (${m.cat})`).join('\n')
+                ? ms.map(m => `${m._kind === 'task' ? `Task (${m._lane}): ` : ''}${m.what} · ${m.cat}`).join('\n')
                 : new Date(year, month, d).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
               style={{
                 cursor: ms.length ? 'pointer' : 'default',
@@ -1035,7 +1035,9 @@ function MiniMonth({ year, month, milestones, today, departureKey, onPick }) {
                 color: primary ? '#fff' : (isToday ? P.accent : P.dim),
                 fontSize: 9, lineHeight: 1, fontWeight: isToday ? 700 : 500,
                 borderRadius: 3,
-                boxShadow: isToday ? `inset 0 0 0 1.5px ${P.accent}` : 'none',
+                boxShadow: isToday
+                  ? `inset 0 0 0 1.5px ${P.accent}`
+                  : isTask ? 'inset 0 0 0 1.5px rgba(255,255,255,0.55)' : 'none',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 transition: 'transform 0.12s ease',
                 fontFamily: 'inherit',
@@ -1812,6 +1814,30 @@ function KolnMapReadout({ place, idx, coords, distKm, openInMaps, onLabelChange,
   );
 }
 
+// Plot tasks (with parseable due dates) alongside milestones. Returns
+// task entries decorated to fit the same shape MilestoneCalendar uses.
+function tasksAsCalendarItems(state, baseYear) {
+  const out = [];
+  const lanes = state.lanes || {};
+  for (const laneKey of ['VJ', 'Jul']) {
+    for (const t of lanes[laneKey] || []) {
+      if (state.checked && state.checked[t.id]) continue; // skip done
+      const d = t.date ? new Date(t.date + 'T00:00:00') : parseWhen(t.due, baseYear);
+      if (!d) continue;
+      out.push({
+        id: t.id,
+        when: t.due,
+        what: t.text,
+        cat: t.cat,
+        _kind: 'task',
+        _lane: laneKey,
+        _date: d,
+      });
+    }
+  }
+  return out;
+}
+
 function MilestoneCalendar({ items, categories, departure, onPick }) {
   const today = new Date();
   // Departure date drives the right edge of the calendar.
@@ -1830,16 +1856,20 @@ function MilestoneCalendar({ items, categories, departure, onPick }) {
   // Decorate items with parsed date + category color/bg for the grid.
   // Prefer the explicit `date` field (ISO YYYY-MM-DD set via the date
   // picker) over the heuristic parse of the free-form `when` text.
+  // Items pre-decorated by tasksAsCalendarItems already have _date.
   const decorated = items.map(it => {
-    const d = it.date
+    const d = it._date || (it.date
       ? new Date(it.date + 'T00:00:00')
-      : parseWhen(it.when, baseYear);
+      : parseWhen(it.when, baseYear));
     const cd = categories[it.cat] || { color: P.dim, bg: P.lineSoft };
     return { ...it, _date: d, _color: cd.color, _bg: cd.bg,
+      _kind: it._kind || 'milestone',
       _key: d ? `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}` : null };
   });
   const placed = decorated.filter(it => it._date);
   const unplaced = decorated.filter(it => !it._date);
+  const taskCount = placed.filter(p => p._kind === 'task').length;
+  const milestoneCount = placed.length - taskCount;
 
   const departureKey = dep ? `${dep.getFullYear()}-${dep.getMonth()}-${dep.getDate()}` : null;
 
@@ -1854,7 +1884,8 @@ function MilestoneCalendar({ items, categories, departure, onPick }) {
           color: P.accent, fontWeight: 700,
         }}>Calendar · here → Köln</div>
         <div className="va-sans" style={{ fontSize: 11, color: P.dim }}>
-          {placed.length} milestone{placed.length === 1 ? '' : 's'} plotted
+          {milestoneCount} milestone{milestoneCount === 1 ? '' : 's'}
+          {taskCount > 0 && ` · ${taskCount} task${taskCount === 1 ? '' : 's'}`}
           {unplaced.length > 0 && ` · ${unplaced.length} undated`}
         </div>
       </div>
@@ -1950,13 +1981,21 @@ function MilestoneTimeline({ state, setState, categories }) {
   };
 
   // Brief flash to draw the eye when a calendar dot is clicked.
+  // Accepts the full item — milestones scroll to the timeline row,
+  // tasks scroll up to their lane in the Tasks section.
   const [flashId, setFlashId] = React.useState(null);
-  const pickById = (id) => {
-    setFlashId(id);
-    const el = document.getElementById(`milestone-${id}`);
+  const pickItem = (it) => {
+    if (!it || !it.id) return;
+    const domId = it._kind === 'task' ? `task-${it.id}` : `milestone-${it.id}`;
+    setFlashId(it.id);
+    const el = document.getElementById(domId);
     if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
     setTimeout(() => setFlashId(null), 1500);
   };
+
+  // Combine milestones with dated tasks so the calendar plots both.
+  const taskItems = tasksAsCalendarItems(state, new Date().getFullYear());
+  const calendarItems = [...items, ...taskItems];
 
   return (
     <div style={{
@@ -1986,10 +2025,10 @@ function MilestoneTimeline({ state, setState, categories }) {
       `}</style>
 
       <MilestoneCalendar
-        items={items}
+        items={calendarItems}
         categories={categories}
         departure={state.meta && state.meta.departure}
-        onPick={pickById}
+        onPick={pickItem}
       />
 
       <div style={{ position: 'relative', paddingLeft: 4 }}>
