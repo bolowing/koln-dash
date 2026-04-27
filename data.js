@@ -159,7 +159,7 @@
         { id: 'j2', text: 'Initiate Merrill 529 Wire 2 (€10,150)', cat: 'Financial', due: 'ASAP', urgency: 'asap' },
         { id: 'j3', text: 'Fund Fintiba blocked account (€12,063)', cat: 'Financial', due: 'After W2', urgency: 'soon' },
         { id: 'j4', text: 'Book Germany trip with Hafiz (move-in)', cat: 'Travel', due: 'TBD', urgency: 'later' },
-        { id: 'j5', text: 'Verify Fintiba SSN ask DIRECTLY (not via agent chat)', cat: 'Banking', due: 'ASAP', urgency: 'asap' },
+        { id: 'j5', text: 'Submit financial support form (sponsor declaration)', cat: 'Financial', due: 'Apr 26', urgency: 'soon' },
       ],
     },
 
@@ -177,7 +177,10 @@
     ],
 
     notes: {},
-    checked: {},
+    checked: {
+      // j5: financial support form was submitted Apr 26 — pre-checked.
+      j5: true,
+    },
     activity: [],
   };
 
