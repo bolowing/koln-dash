@@ -89,6 +89,7 @@
       collapsed: {},
       theme: 'light',  // 'light' | 'dark'
       seededPersonalMilestones: false,
+      seededVjUpdate20260427: false,
     },
 
     // Up to 3 task ids currently "in progress". Auto-unpinned when checked off.
@@ -143,9 +144,9 @@
       VJ: [
         { id: 't1',  text: 'Share Fintiba details + wire instructions', cat: 'Financial', due: 'May 1', urgency: 'soon' },
         { id: 't2',  text: 'Apply for Visa credit card (Indonesian bank)', cat: 'Banking', due: 'Pre-departure', urgency: 'soon' },
-        { id: 't3',  text: 'Confirm JIS registrar signature on HS cert', cat: 'Visa docs', due: 'ASAP', urgency: 'asap' },
+        { id: 't3',  text: 'JIS diploma — get agent sign-off on stamp-only path or letter of support', cat: 'Visa docs', due: 'ASAP', urgency: 'asap' },
         { id: 't4',  text: 'Apostille + translate birth certificate', cat: 'Visa docs', due: 'ASAP', urgency: 'asap' },
-        { id: 't5',  text: 'Apostille + translate HS cert + report', cat: 'Visa docs', due: 'ASAP', urgency: 'asap' },
+        { id: 't5',  text: 'Apostille + translate HS transcript (signed Apr 26 ✓)', cat: 'Visa docs', due: 'ASAP', urgency: 'asap' },
         { id: 't6',  text: 'Request BINUS double degree letter', cat: 'Visa docs', due: 'ASAP', urgency: 'asap' },
         { id: 't7',  text: 'Request final BINUS transcript', cat: 'Visa docs', due: 'ASAP', urgency: 'asap' },
         { id: 't8',  text: 'Write motivation letter (signed + dated)', cat: 'Visa docs', due: 'ASAP', urgency: 'asap' },
@@ -159,10 +160,12 @@
         { id: 'j2', text: 'Initiate Merrill 529 Wire 2 (€10,150)', cat: 'Financial', due: 'ASAP', urgency: 'asap' },
         { id: 'j3', text: 'Fund Fintiba blocked account (€12,063)', cat: 'Financial', due: 'After W2', urgency: 'soon' },
         { id: 'j4', text: 'Book Germany trip with Hafiz (move-in)', cat: 'Travel', due: 'TBD', urgency: 'later' },
+        { id: 'j5', text: 'Submit financial support form (sponsor declaration)', cat: 'Financial', due: 'Apr 26', urgency: 'soon' },
       ],
     },
 
     upcoming: [
+      { id: 'mu-jis-partial', when: 'Apr 26', what: 'JIS transcript signed ✓ · diploma stamp-only (agent reviewing)', cat: 'Visa docs' },
       { id: 'mu-wire1', when: 'May 1',  what: 'Confirm Wire 1 received',   cat: 'Financial' },
       { id: 'mu-wire2', when: 'May',    what: 'Send Wire 2 to CBS',        cat: 'Financial' },
       { id: 'mp-trip',  when: 'May/Jun', what: 'Plan Germany move-in trip (Jul + Hafiz)', cat: 'Personal' },
@@ -175,7 +178,10 @@
     ],
 
     notes: {},
-    checked: {},
+    checked: {
+      // j5: financial support form was submitted Apr 26 — pre-checked.
+      j5: true,
+    },
     activity: [],
   };
 
@@ -229,15 +235,54 @@
             const personalDefaults = DEFAULTS.upcoming.filter(u => u.id && u.id.startsWith('mp-') && !haveIds.has(u.id));
             mergedUpcoming = [...parsed.upcoming, ...personalDefaults];
           }
+
+          // One-time migration (2026-04-27): sync VJ status update.
+          // - Reword t3 (JIS diploma path) and t5 (transcript apostille).
+          // - Add Jul task j5 (financial support form) and pre-check it.
+          // - Add the JIS partial-resolution milestone.
+          // Each step only runs if the source artefact still matches the
+          // pre-migration shape, so user edits aren't clobbered.
+          let mergedLanes = parsed.lanes || DEFAULTS.lanes;
+          let mergedChecked = parsed.checked || {};
+          const seededVj0427 = !!(parsed.ui && parsed.ui.seededVjUpdate20260427);
+          if (!seededVj0427) {
+            const VJ_T3_OLD = 'Confirm JIS registrar signature on HS cert';
+            const VJ_T3_NEW = 'JIS diploma — get agent sign-off on stamp-only path or letter of support';
+            const VJ_T5_OLD = 'Apostille + translate HS cert + report';
+            const VJ_T5_NEW = 'Apostille + translate HS transcript (signed Apr 26 ✓)';
+            const J5 = { id: 'j5', text: 'Submit financial support form (sponsor declaration)',
+                         cat: 'Financial', due: 'Apr 26', urgency: 'soon' };
+            const M_JIS = { id: 'mu-jis-partial', when: 'Apr 26',
+                            what: 'JIS transcript signed ✓ · diploma stamp-only (agent reviewing)',
+                            cat: 'Visa docs' };
+
+            const vjLane = (mergedLanes.VJ || []).map(t => {
+              if (t.id === 't3' && t.text === VJ_T3_OLD) return { ...t, text: VJ_T3_NEW };
+              if (t.id === 't5' && t.text === VJ_T5_OLD) return { ...t, text: VJ_T5_NEW };
+              return t;
+            });
+            let julLane = mergedLanes.Jul || [];
+            if (!julLane.some(t => t.id === 'j5')) {
+              julLane = [...julLane, J5];
+              mergedChecked = { ...mergedChecked, j5: true };
+            }
+            mergedLanes = { ...mergedLanes, VJ: vjLane, Jul: julLane };
+
+            if (!mergedUpcoming.some(u => u.id === 'mu-jis-partial')) {
+              mergedUpcoming = [M_JIS, ...mergedUpcoming];
+            }
+          }
           return { ...DEFAULTS, ...parsed,
             meta:  { ...DEFAULTS.meta,  ...(parsed.meta||{}) },
             money: { ...DEFAULTS.money, ...(parsed.money||{}) },
-            lanes: { ...DEFAULTS.lanes, ...(parsed.lanes||{}) },
+            lanes: { ...DEFAULTS.lanes, ...mergedLanes },
             blocked: { ...DEFAULTS.blocked, ...(parsed.blocked||{}), steps: mergedSteps },
             ui: { ...DEFAULTS.ui, ...(parsed.ui||{}),
               collapsed: { ...(parsed.ui && parsed.ui.collapsed || {}) },
-              seededPersonalMilestones: true },
+              seededPersonalMilestones: true,
+              seededVjUpdate20260427: true },
             upcoming: mergedUpcoming,
+            checked: mergedChecked,
             pinned: Array.isArray(parsed.pinned) ? parsed.pinned.slice(0, 3) : [],
             map: { ...DEFAULTS.map, ...(parsed.map || {}),
               places: Array.isArray(parsed.map && parsed.map.places) && parsed.map.places.length
@@ -245,7 +290,6 @@
                 : DEFAULTS.map.places,
             },
             categories: mergedCats,
-            checked: parsed.checked || {},
             notes: parsed.notes || {},
             activity: Array.isArray(parsed.activity) ? parsed.activity : [],
           };
