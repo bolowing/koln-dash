@@ -850,6 +850,17 @@ function QuickAddTask({ lane, state, setState, categories }) {
   const [userPickedCat, setUserPickedCat] = React.useState(false);
   const [urgency, setUrgency] = React.useState('soon');
   const [due, setDue] = React.useState('Soon');
+  const [date, setDate] = React.useState(''); // ISO YYYY-MM-DD — plots on the calendar
+
+  // When user picks a date, auto-fill the 'due' display unless they've
+  // typed something custom there already.
+  const onDateChange = (iso) => {
+    setDate(iso);
+    if (iso && (due === 'Soon' || due === '' || /^[A-Z][a-z]{2} \d{1,2}$/.test(due))) {
+      const dt = new Date(iso + 'T00:00:00');
+      setDue(dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+    }
+  };
 
   // As text changes, auto-pick a category from keywords — but stop the
   // auto-detect once the user explicitly clicks a category chip.
@@ -865,25 +876,24 @@ function QuickAddTask({ lane, state, setState, categories }) {
     if (!trimmed) return;
     const taskId = 'x' + Date.now();
     setState(s => {
+      const newTask = {
+        id: taskId, text: trimmed,
+        cat, due: due.trim() || 'TBD', urgency,
+      };
+      if (date) newTask.date = date;  // ISO date drives the calendar plot
       const next = {
         ...s,
-        lanes: {
-          ...s.lanes,
-          [lane]: [...s.lanes[lane], {
-            id: taskId, text: trimmed,
-            cat, due: due.trim() || 'TBD', urgency,
-          }],
-        },
+        lanes: { ...s.lanes, [lane]: [...s.lanes[lane], newTask] },
       };
       return KD.logActivity(next, next.meta.currentUser || 'VJ', 'added task', trimmed);
     });
-    setText('');
+    setText(''); setDate('');
     // Re-arm the keyword guesser for the next entry.
     setUserPickedCat(false);
   };
 
   const reset = () => {
-    setText('');
+    setText(''); setDate('');
     setCat(mostCommonCat(state, lane) || catNames[0] || 'Personal');
     setUserPickedCat(false);
     setUrgency('soon'); setDue('Soon');
@@ -1015,18 +1025,36 @@ function QuickAddTask({ lane, state, setState, categories }) {
               <div className="va-mono" style={{
                 fontSize: 9, letterSpacing: 1.5, textTransform: 'uppercase',
                 color: P.dim, fontWeight: 700, marginBottom: 6,
-              }}>Due</div>
-              <input
-                value={due} onChange={e => setDue(e.target.value)}
-                onKeyDown={e => { if (e.key === 'Enter') submit(); }}
-                placeholder="e.g. May 1, ASAP, TBD"
-                style={{
-                  width: '100%', minWidth: 0,
-                  border: `1px solid ${P.lineMid}`, background: P.card,
-                  color: P.ink, fontFamily: 'inherit', fontSize: 12,
-                  padding: '5px 9px', borderRadius: 6, outline: 'none',
-                }}
-              />
+                display: 'flex', justifyContent: 'space-between', alignItems: 'baseline',
+              }}>
+                <span>Due</span>
+                {date && <span style={{ color: P.accent, letterSpacing: 0.5 }}>↳ on calendar</span>}
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '130px 1fr', gap: 4 }}>
+                <input
+                  type="date" value={date}
+                  onChange={e => onDateChange(e.target.value)}
+                  title="Pick a date — plots a dot on the What's-ahead calendar"
+                  style={{
+                    minWidth: 0,
+                    border: `1px solid ${P.lineMid}`, background: P.card,
+                    color: P.ink, fontFamily: 'inherit', fontSize: 12,
+                    padding: '5px 9px', borderRadius: 6, outline: 'none',
+                  }}
+                />
+                <input
+                  value={due} onChange={e => setDue(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') submit(); }}
+                  placeholder={date ? 'Label (auto)' : 'e.g. May 1, ASAP, TBD'}
+                  title="How the due date displays on the task row"
+                  style={{
+                    width: '100%', minWidth: 0,
+                    border: `1px solid ${P.lineMid}`, background: P.card,
+                    color: P.ink, fontFamily: 'inherit', fontSize: 12,
+                    padding: '5px 9px', borderRadius: 6, outline: 'none',
+                  }}
+                />
+              </div>
             </div>
           </div>
 
@@ -1061,12 +1089,14 @@ function TaskRow({ t, checked, pinned = false, pinnedCount = 0, hasNotes, commen
   const pinDisabled = !pinned && !canPin;
   return (
     <div
+      id={`task-${t.id}`}
       className="va-sans v1-task-row"
       style={{
         display: 'grid', gridTemplateColumns: '20px 1fr auto', gap: 10,
         padding: '9px 8px', borderRadius: 8, cursor: 'pointer',
         transition: 'background .12s',
         background: pinned ? P.accentSoft : 'transparent',
+        scrollMarginTop: 100,
       }}
       onMouseEnter={e => { if (!pinned) e.currentTarget.style.background = P.hover; }}
       onMouseLeave={e => { e.currentTarget.style.background = pinned ? P.accentSoft : 'transparent'; }}
