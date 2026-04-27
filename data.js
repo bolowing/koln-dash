@@ -89,6 +89,7 @@
       collapsed: {},
       theme: 'light',  // 'light' | 'dark'
       seededPersonalMilestones: false,
+      seededVjUpdate20260427: false,
     },
 
     // Up to 3 task ids currently "in progress". Auto-unpinned when checked off.
@@ -234,15 +235,54 @@
             const personalDefaults = DEFAULTS.upcoming.filter(u => u.id && u.id.startsWith('mp-') && !haveIds.has(u.id));
             mergedUpcoming = [...parsed.upcoming, ...personalDefaults];
           }
+
+          // One-time migration (2026-04-27): sync VJ status update.
+          // - Reword t3 (JIS diploma path) and t5 (transcript apostille).
+          // - Add Jul task j5 (financial support form) and pre-check it.
+          // - Add the JIS partial-resolution milestone.
+          // Each step only runs if the source artefact still matches the
+          // pre-migration shape, so user edits aren't clobbered.
+          let mergedLanes = parsed.lanes || DEFAULTS.lanes;
+          let mergedChecked = parsed.checked || {};
+          const seededVj0427 = !!(parsed.ui && parsed.ui.seededVjUpdate20260427);
+          if (!seededVj0427) {
+            const VJ_T3_OLD = 'Confirm JIS registrar signature on HS cert';
+            const VJ_T3_NEW = 'JIS diploma — get agent sign-off on stamp-only path or letter of support';
+            const VJ_T5_OLD = 'Apostille + translate HS cert + report';
+            const VJ_T5_NEW = 'Apostille + translate HS transcript (signed Apr 26 ✓)';
+            const J5 = { id: 'j5', text: 'Submit financial support form (sponsor declaration)',
+                         cat: 'Financial', due: 'Apr 26', urgency: 'soon' };
+            const M_JIS = { id: 'mu-jis-partial', when: 'Apr 26',
+                            what: 'JIS transcript signed ✓ · diploma stamp-only (agent reviewing)',
+                            cat: 'Visa docs' };
+
+            const vjLane = (mergedLanes.VJ || []).map(t => {
+              if (t.id === 't3' && t.text === VJ_T3_OLD) return { ...t, text: VJ_T3_NEW };
+              if (t.id === 't5' && t.text === VJ_T5_OLD) return { ...t, text: VJ_T5_NEW };
+              return t;
+            });
+            let julLane = mergedLanes.Jul || [];
+            if (!julLane.some(t => t.id === 'j5')) {
+              julLane = [...julLane, J5];
+              mergedChecked = { ...mergedChecked, j5: true };
+            }
+            mergedLanes = { ...mergedLanes, VJ: vjLane, Jul: julLane };
+
+            if (!mergedUpcoming.some(u => u.id === 'mu-jis-partial')) {
+              mergedUpcoming = [M_JIS, ...mergedUpcoming];
+            }
+          }
           return { ...DEFAULTS, ...parsed,
             meta:  { ...DEFAULTS.meta,  ...(parsed.meta||{}) },
             money: { ...DEFAULTS.money, ...(parsed.money||{}) },
-            lanes: { ...DEFAULTS.lanes, ...(parsed.lanes||{}) },
+            lanes: { ...DEFAULTS.lanes, ...mergedLanes },
             blocked: { ...DEFAULTS.blocked, ...(parsed.blocked||{}), steps: mergedSteps },
             ui: { ...DEFAULTS.ui, ...(parsed.ui||{}),
               collapsed: { ...(parsed.ui && parsed.ui.collapsed || {}) },
-              seededPersonalMilestones: true },
+              seededPersonalMilestones: true,
+              seededVjUpdate20260427: true },
             upcoming: mergedUpcoming,
+            checked: mergedChecked,
             pinned: Array.isArray(parsed.pinned) ? parsed.pinned.slice(0, 3) : [],
             map: { ...DEFAULTS.map, ...(parsed.map || {}),
               places: Array.isArray(parsed.map && parsed.map.places) && parsed.map.places.length
@@ -250,7 +290,6 @@
                 : DEFAULTS.map.places,
             },
             categories: mergedCats,
-            checked: parsed.checked || {},
             notes: parsed.notes || {},
             activity: Array.isArray(parsed.activity) ? parsed.activity : [],
           };
